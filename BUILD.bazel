@@ -1,0 +1,18 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//bazel:copts.bzl", "copts")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "ecsact_parse_runtime_interop",
+    srcs = [
+        "ecsact/detail/visit_statement.hh",
+        "ecsact/parse_runtime_interop.cc",
+    ],
+    hdrs = ["ecsact/parse_runtime_interop.h"],
+    copts = copts,
+    deps = [
+        "//parse-resolver-runtime",
+        "@ecsact_parse",
+    ],
+)

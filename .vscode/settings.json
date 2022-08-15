@@ -1,0 +1,15 @@
+{
+	"editor.formatOnSave": true,
+	"search.exclude": {
+		"external": true,
+		"bazel-*": true,
+		"compile_commands.json": true
+	},
+	"lldb.launch.sourceMap": {
+		"/proc/self/cwd": "${workspaceFolder}"
+	},
+	"files.insertFinalNewline": true,
+	"files.eol": "\n",
+	"editor.insertSpaces": false,
+	"C_Cpp.default.compileCommands": "${workspaceFolder}/compile_commands.json"
+}

@@ -1,0 +1,17 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "test //test:test",
+			"request": "launch",
+			"type": "cppdbg",
+			"cwd": "${workspaceFolder}",
+			"program": "${workspaceRoot}/bazel-bin/test/test",
+			"windows": {
+				"type": "cppvsdbg",
+				"program": "${workspaceRoot}/bazel-bin/test/test.exe"
+			},
+			"preLaunchTask": "build //test:test"
+		}
+	]
+}

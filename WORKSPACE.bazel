@@ -1,0 +1,39 @@
+workspace(name = "ecsact_parse_runtime_interop")
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "ecsact_runtime",
+    sha256 = "8f0b625ca50f530da3c94a3875cdb88a4ba80e50c1e452e48e31d409866a9461",
+    strip_prefix = "ecsact_runtime-b01ca22af5dd83b2a741449a5c22165fc95a49f6",
+    url = "https://github.com/ecsact-dev/ecsact_runtime/archive/b01ca22af5dd83b2a741449a5c22165fc95a49f6.zip",
+)
+
+http_archive(
+    name = "ecsact_parse",
+    sha256 = "a938bd3ad885f5ca20556b944f07b5ffc8be4727f4d9a40f017f521ba8d810ad",
+    strip_prefix = "ecsact_parse-e035e8da7b0b92474aa5e446f695c9dbe772403a",
+    url = "https://github.com/ecsact-dev/ecsact_parse/archive/e035e8da7b0b92474aa5e446f695c9dbe772403a.zip",
+)
+
+load("@ecsact_parse//:repositories.bzl", "ecsact_parse_dependencies")
+
+ecsact_parse_dependencies()
+
+http_archive(
+    name = "com_google_googletest",
+    sha256 = "2289a098c17bbe4c9ce2abd7283d3638c68b2f889f398105a8b8846356ed176f",
+    strip_prefix = "googletest-7274ec186442c96e4c7dcc99c684a03e5db2ff48",
+    url = "https://github.com/google/googletest/archive/7274ec186442c96e4c7dcc99c684a03e5db2ff48.zip",
+)
+
+http_archive(
+    name = "hedron_compile_commands",
+    sha256 = "106d0e68904c347a4b51b1bc84d68e6e39ebea861fc9e28d6090674e3d737b32",
+    strip_prefix = "bazel-compile-commands-extractor-8fd960d28648d982b90cf6e152c43ea159520cf3",
+    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/8fd960d28648d982b90cf6e152c43ea159520cf3.tar.gz",
+)
+
+load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
+
+hedron_compile_commands_setup()

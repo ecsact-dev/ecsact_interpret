@@ -1,0 +1,18 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//bazel:copts.bzl", "copts")
+
+package(default_visibility = ["//:__subpackages__"])
+
+cc_library(
+    name = "parse-resolver-runtime",
+    srcs = ["parse-resolver-runtime.cc"],
+    copts = copts,
+    defines = [
+        "ECSACT_DYNAMIC_API_EXPORT",
+        "ECSACT_META_API_EXPORT",
+    ],
+    deps = [
+        "@ecsact_runtime//:dynamic",
+        "@ecsact_runtime//:meta",
+    ],
+)
