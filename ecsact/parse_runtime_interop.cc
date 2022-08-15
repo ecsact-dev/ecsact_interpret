@@ -3,6 +3,7 @@
 #include <concepts>
 #include <unordered_map>
 #include <string_view>
+#include <vector>
 #include "ecsact/parse.h"
 #include "ecsact/runtime/dynamic.h"
 #include "ecsact/runtime/meta.h"
@@ -104,16 +105,15 @@ void ecsact_parse_runtime_interop
 								if constexpr(can_invoke_with_context_data) {
 									obj.statement_interop(
 										*params.context_statement,
-										std::forward<CtxData>(ctx_data),
+										ctx_data,
 										*params.statement,
-										std::forward<Data>(data)
+										data
 									);
 								} else {
 									constexpr bool can_invoke_with_context = std::invocable
 										< decltype(&parse_interop_object::statement_interop)
 										, parse_interop_object*
 										, ecsact_statement
-										, CtxData
 										, ecsact_statement
 										, Data
 										>;
@@ -122,7 +122,7 @@ void ecsact_parse_runtime_interop
 										obj.statement_interop(
 											*params.context_statement,
 											*params.statement,
-											std::forward<Data>(data)
+											data
 										);
 									}
 								}
