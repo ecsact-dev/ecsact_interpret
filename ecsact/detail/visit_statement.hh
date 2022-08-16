@@ -26,14 +26,7 @@ namespace ecsact::detail {
 				return callback(statement.data.action_statement);
 			case ECSACT_STATEMENT_ENUM:
 				return callback(statement.data.enum_statement);
-			case ECSACT_STATEMENT_I8_FIELD:
-			case ECSACT_STATEMENT_U8_FIELD:
-			case ECSACT_STATEMENT_I16_FIELD:
-			case ECSACT_STATEMENT_U16_FIELD:
-			case ECSACT_STATEMENT_I32_FIELD:
-			case ECSACT_STATEMENT_U32_FIELD:
-			case ECSACT_STATEMENT_F32_FIELD:
-			case ECSACT_STATEMENT_ENTITY_FIELD:
+			case ECSACT_STATEMENT_BUILTIN_TYPE_FIELD:
 				return callback(statement.data.field_statement);
 			case ECSACT_STATEMENT_USER_TYPE_FIELD:
 				return callback(statement.data.user_type_field_statement);
