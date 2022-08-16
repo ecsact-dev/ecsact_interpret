@@ -4,46 +4,63 @@
 #include <unordered_map>
 #include <string_view>
 #include <vector>
+#include <string>
 #include "ecsact/parse.h"
 #include "ecsact/runtime/dynamic.h"
 #include "ecsact/runtime/meta.h"
 
 #include "detail/visit_statement.hh"
 
-struct parse_interop_object {
-	// key is statement ID, value is declaration
-	std::unordered_map<int32_t, ecsact_component_id> _components;
+static ecsact_component_id ensure_component(ecsact_statement statement) {
+	auto& data = statement.data.component_statement;
+	std::string_view comp_name(
+		data.component_name.data,
+		data.component_name.length
+	);
 
-	void statement_interop
-		( ecsact_statement            statement
-		, ecsact_component_statement  data
-		)
-	{
-		std::string_view comp_name(
-			data.component_name.data,
-			data.component_name.length
-		);
+	std::vector<ecsact_component_id> component_ids;
+	component_ids.resize(ecsact_meta_count_components());
+	ecsact_meta_get_component_ids(
+		component_ids.size(),
+		component_ids.data(),
+		nullptr
+	);
 
-		std::vector<ecsact_component_id> component_ids;
-		component_ids.resize(ecsact_meta_count_components());
-		ecsact_meta_get_component_ids(
-			component_ids.size(),
-			component_ids.data(),
-			nullptr
-		);
-
-		for(auto comp_id : component_ids) {
-			if(comp_name == ecsact_meta_component_name(comp_id)) {
-				return;
-			}
+	for(auto comp_id : component_ids) {
+		if(comp_name == ecsact_meta_component_name(comp_id)) {
+			return comp_id;
 		}
+	}
 
-		auto comp_id = ecsact_create_component(
-			data.component_name.data,
-			data.component_name.length
-		);
+	return ecsact_create_component(
+		data.component_name.data,
+		data.component_name.length
+	);
+}
 
+struct parse_interop_object {
+	// key is statement ID, value is declaration ID
+	std::unordered_map<int32_t, ecsact_component_id> _components;
+	std::unordered_map<int32_t, ecsact_composite_id> _composites;
+
+	void component_interop(ecsact_statement statement) {
+		auto comp_id = ensure_component(statement);
 		_components[statement.id] = comp_id;
+		_composites[statement.id] = ecsact_id_cast<ecsact_composite_id>(comp_id);
+	}
+
+	void field_interop(ecsact_statement context, ecsact_statement statement) {
+		auto& composite_id = _composites.at(context.id);
+		auto& data = statement.data.field_statement;
+
+		std::string field_name(data.field_name.data, data.field_name.length);
+		
+		ecsact_add_field(
+			composite_id,
+			field_name.c_str(),
+			data.field_type,
+			data.length
+		);
 	}
 };
 
@@ -58,79 +75,14 @@ void ecsact_parse_runtime_interop
 		file_paths,
 		file_paths_count,
 		[&](ecsact_parse_callback_params params) {
-			// This calls one of 3 overloads of obj.statement_interop
-			// 1. obj.statement_interop(
-			//      context_statement,
-			//      context_statement_data,
-			//      statement,
-			//      statement_data
-			//    );
-			// 2. obj.statement_interop(
-			//      context_statement,
-			//      statement,
-			//      statement_data
-			//    );
-			// 3. obj.statement_interop(
-			//      statement,
-			//      statement_data
-			//    );
-			ecsact::detail::parse_statement_data_visit(
-				*params.statement,
-				[&]<typename Data>(Data&& data) {
-					constexpr bool can_invoke_no_context = std::invocable
-						< decltype(&parse_interop_object::statement_interop)
-						, parse_interop_object*
-						, ecsact_statement
-						, Data
-						>;
-
-					if constexpr(can_invoke_no_context) {
-						obj.statement_interop(
-							*params.statement,
-							std::forward<Data>(data)
-						);
-					} else if(params.context_statement) {
-						ecsact::detail::parse_statement_data_visit(
-							*params.context_statement,
-							[&]<typename CtxData>(CtxData&& ctx_data) {
-								constexpr bool can_invoke_with_context_data = std::invocable
-									< decltype(&parse_interop_object::statement_interop)
-									, parse_interop_object*
-									, ecsact_statement
-									, CtxData
-									, ecsact_statement
-									, Data
-									>;
-
-								if constexpr(can_invoke_with_context_data) {
-									obj.statement_interop(
-										*params.context_statement,
-										ctx_data,
-										*params.statement,
-										data
-									);
-								} else {
-									constexpr bool can_invoke_with_context = std::invocable
-										< decltype(&parse_interop_object::statement_interop)
-										, parse_interop_object*
-										, ecsact_statement
-										, ecsact_statement
-										, Data
-										>;
-									
-									if constexpr(can_invoke_with_context) {
-										obj.statement_interop(
-											*params.context_statement,
-											*params.statement,
-											data
-										);
-									}
-								}
-							}
-						);
-					}
-				}
-			);
+			switch(params.statement->type) {
+				case ECSACT_STATEMENT_COMPONENT:
+					obj.component_interop(*params.statement);
+					break;
+				case ECSACT_STATEMENT_BUILTIN_TYPE_FIELD:
+					obj.field_interop(*params.context_statement, *params.statement);
+					break;
+			}
 
 			return ECSACT_PARSE_CALLBACK_CONTINUE;
 		}

@@ -4,9 +4,9 @@
 		{
 			"name": "test //test:test",
 			"request": "launch",
-			"type": "cppdbg",
-			"cwd": "${workspaceFolder}",
 			"program": "${workspaceRoot}/bazel-bin/test/test",
+			"cwd": "${workspaceFolder}",
+			"type": "lldb",
 			"windows": {
 				"type": "cppvsdbg",
 				"program": "${workspaceRoot}/bazel-bin/test/test.exe"
