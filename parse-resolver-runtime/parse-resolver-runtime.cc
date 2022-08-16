@@ -6,6 +6,7 @@
 #include <variant>
 #include <vector>
 #include <exception>
+#include <stdexcept>
 #include <unordered_map>
 #include <map>
 
