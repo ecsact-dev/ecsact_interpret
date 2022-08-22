@@ -2,4 +2,15 @@ package test;
 
 component TestComponent {
 	i32 num;
+	entity test_entity;
+}
+
+system TestSystem {
+	readwrite TestComponent with test_entity {
+		readwrite TestComponent;
+	}
+
+	system TestNestedSystem {
+		readwrite TestComponent;
+	}
 }
