@@ -61,6 +61,7 @@ using any_def = std::variant<comp_def, action_def, system_def>;
 struct package_def {
 	std::string name;
 	bool main;
+	std::string source_file_path;
 };
 
 static std::atomic_int32_t last_id = 0;
@@ -465,4 +466,26 @@ void ecsact_add_child_system
 	
 	child_def.parent_system_id = parent;
 	parent_def.nested_systems.push_back(child);
+}
+
+void ecsact_set_package_source_file_path
+	( ecsact_package_id  package_id
+	, const char*        source_file_path
+	, int32_t            source_file_path_len
+	)
+{
+	auto& def = package_defs.at(package_id);
+	
+	def.source_file_path = std::string(
+		source_file_path,
+		source_file_path_len
+	);
+}
+
+const char* ecsact_meta_package_file_path
+	( ecsact_package_id package_id
+	)
+{
+	auto& def = package_defs.at(package_id);
+	return def.source_file_path.c_str();
 }

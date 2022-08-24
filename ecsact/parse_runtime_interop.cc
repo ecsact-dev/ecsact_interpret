@@ -67,6 +67,12 @@ struct parse_interop_package {
 			data.package_name.data,
 			data.package_name.length
 		);
+
+		ecsact_set_package_source_file_path(
+			package_id,
+			source_file_path.data(),
+			static_cast<int32_t>(source_file_path.size())
+		);
 	}
 
 	void import_interop
