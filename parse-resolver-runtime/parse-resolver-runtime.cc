@@ -62,6 +62,10 @@ struct package_def {
 	std::string name;
 	bool main;
 	std::string source_file_path;
+
+	std::vector<ecsact_system_id> systems;
+	std::vector<ecsact_action_id> actions;
+	std::vector<ecsact_component_id> components;
 };
 
 static std::atomic_int32_t last_id = 0;
@@ -69,6 +73,7 @@ static std::unordered_map<ecsact_package_id, package_def> package_defs;
 static std::unordered_map<ecsact_decl_id, ecsact_package_id> def_owner_map;
 static std::unordered_map<ecsact_component_id, comp_def> comp_defs;
 static std::unordered_map<ecsact_system_id, system_def> sys_defs;
+static std::unordered_map<ecsact_action_id, action_def> act_defs;
 
 template<typename T>
 static ecsact_package_id owner_package_id(T id) {
@@ -200,7 +205,9 @@ ecsact_component_id ecsact_create_component
 	, int32_t            component_name_len
 	)
 {
+	auto& pkg_def = package_defs.at(owner);
 	auto comp_id = next_id<ecsact_component_id>();
+	pkg_def.components.push_back(comp_id);
 	set_package_owner(comp_id, owner);
 	auto& def = comp_defs[comp_id];
 	def.name = std::string_view(component_name, component_name_len);
@@ -214,7 +221,9 @@ ecsact_system_id ecsact_create_system
 	, int32_t            system_name_len
 	)
 {
+	auto& pkg_def = package_defs.at(owner);
 	auto sys_id = next_id<ecsact_system_id>();
+	pkg_def.systems.push_back(sys_id);
 	set_package_owner(sys_id, owner);
 	auto& def = sys_defs[sys_id];
 	def.name = std::string_view(system_name, system_name_len);
@@ -222,29 +231,83 @@ ecsact_system_id ecsact_create_system
 	return sys_id;
 }
 
-int32_t ecsact_meta_count_systems() {
-	return static_cast<int32_t>(sys_defs.size());
+
+ecsact_action_id ecsact_create_action
+	( ecsact_package_id  owner
+	, const char*        action_name
+	, int32_t            action_name_len
+	)
+{
+	auto& pkg_def = package_defs.at(owner);
+	auto act_id = next_id<ecsact_action_id>();
+	pkg_def.actions.push_back(act_id);
+	set_package_owner(act_id, owner);
+	auto& def = act_defs[act_id];
+	def.name = std::string_view(action_name, action_name_len);
+
+	return act_id;
+}
+
+int32_t ecsact_meta_count_systems
+	(	ecsact_package_id package_id
+	)
+{
+	auto& pkg_def = package_defs.at(package_id);
+	return static_cast<int32_t>(pkg_def.systems.size());
 }
 
 void ecsact_meta_get_system_ids
-	( int32_t            max_system_count
+	( ecsact_package_id  package_id
+	, int32_t            max_system_count
 	, ecsact_system_id*  out_system_ids
 	, int32_t*           out_system_count
 	)
 {
-	auto itr = sys_defs.begin();
-	for(int32_t i=0; max_system_count > i && itr != sys_defs.end(); ++i) {
-		out_system_ids[i] = itr->first;
+	auto& pkg_def = package_defs.at(package_id);
+	auto itr = pkg_def.systems.begin();
+	for(int32_t i=0; max_system_count > i && itr != pkg_def.systems.end(); ++i) {
+		out_system_ids[i] = *itr;
 		++itr;
 	}
 
 	if(out_system_count != nullptr) {
-		*out_system_count = static_cast<int32_t>(sys_defs.size());
+		*out_system_count = static_cast<int32_t>(pkg_def.systems.size());
 	}
 }
 
-int32_t ecsact_meta_count_components() {
-	return static_cast<int32_t>(comp_defs.size());
+int32_t ecsact_meta_count_actions
+	(	ecsact_package_id package_id
+	)
+{
+	auto& pkg_def = package_defs.at(package_id);
+	return static_cast<int32_t>(pkg_def.actions.size());
+}
+
+void ecsact_meta_get_action_ids
+	( ecsact_package_id  package_id
+	, int32_t            max_action_count
+	, ecsact_action_id*  out_action_ids
+	, int32_t*           out_action_count
+	)
+{
+	auto& pkg_def = package_defs.at(package_id);
+	auto itr = pkg_def.actions.begin();
+	for(int32_t i=0; max_action_count > i && itr != pkg_def.actions.end(); ++i) {
+		out_action_ids[i] = *itr;
+		++itr;
+	}
+
+	if(out_action_count != nullptr) {
+		*out_action_count = static_cast<int32_t>(pkg_def.actions.size());
+	}
+}
+
+int32_t ecsact_meta_count_components
+	( ecsact_package_id package_id
+	)
+{
+	auto& pkg_def = package_defs.at(package_id);
+	return static_cast<int32_t>(pkg_def.components.size());
 }
 
 const char* ecsact_meta_component_name
@@ -262,19 +325,21 @@ const char* ecsact_meta_system_name
 }
 
 void ecsact_meta_get_component_ids
-	( int32_t               max_component_count
+	( ecsact_package_id     package_id
+	, int32_t               max_component_count
 	, ecsact_component_id*  out_component_ids
 	, int32_t*              out_component_count
 	)
 {
-	auto itr = comp_defs.begin();
-	for(int32_t i=0; max_component_count > i && itr != comp_defs.end(); ++i) {
-		out_component_ids[i] = itr->first;
+	auto& pkg_def = package_defs.at(package_id);
+	auto itr = pkg_def.components.begin();
+	for(int32_t i=0; max_component_count > i && itr != pkg_def.components.end(); ++i) {
+		out_component_ids[i] = *itr;
 		++itr;
 	}
 
 	if(out_component_count != nullptr) {
-		*out_component_count = static_cast<int32_t>(comp_defs.size());
+		*out_component_count = static_cast<int32_t>(pkg_def.components.size());
 	}
 }
 

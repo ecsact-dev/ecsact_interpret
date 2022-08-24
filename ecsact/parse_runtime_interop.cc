@@ -8,11 +8,15 @@
 #include <string_view>
 #include <cassert>
 #include <optional>
+#include <stdexcept>
+#include "magic_enum.hpp"
 #include "ecsact/parse.h"
 #include "ecsact/runtime/dynamic.h"
 #include "ecsact/runtime/meta.h"
 
 #include "detail/visit_statement.hh"
+
+using namespace std::string_literals;
 
 std::optional<ecsact_field_id> find_field_by_name
 	( ecsact_composite_id  compo_id
@@ -48,6 +52,7 @@ struct parse_interop_package {
 	std::unordered_map<int32_t, ecsact_component_id> _system_components;
 	std::unordered_map<std::string, ecsact_component_id> _component_by_name;
 	std::unordered_map<int32_t, ecsact_system_id> _systems;
+	std::unordered_map<int32_t, ecsact_action_id> _actions;
 
 	std::unordered_map<int32_t, ecsact_system_like_id> _system_likes;
 	std::unordered_map<int32_t, ecsact_composite_id> _composites;
@@ -113,6 +118,23 @@ struct parse_interop_package {
 		_system_likes[statement.id] = sys_like_id;
 
 		return sys_id;
+	}
+
+	ecsact_action_id action_interop
+		( ecsact_statement statement
+		)
+	{
+		auto& data = statement.data.action_statement;
+		auto act_id = ecsact_create_action(
+			package_id,
+			data.action_name.data,
+			data.action_name.length
+		);
+		auto sys_like_id = ecsact_id_cast<ecsact_system_like_id>(act_id);
+		_actions[statement.id] = act_id;
+		_system_likes[statement.id] = sys_like_id;
+
+		return act_id;
 	}
 
 	void nested_system_interop
@@ -296,9 +318,14 @@ void ecsact_parse_runtime_interop
 						*params.statement
 					);
 					break;
-				// case ECSACT_STATEMENT_ACTION:
-				// 	pkg.action_interop(*params.statement);
-				// 	break;
+				case ECSACT_STATEMENT_ACTION:
+					pkg.action_interop(*params.statement);
+					break;
+				default:
+					throw std::runtime_error(
+						"Unhandled statement type "s +
+						std::string(magic_enum::enum_name(params.statement->type))
+					);
 			}
 
 			return ECSACT_PARSE_CALLBACK_CONTINUE;

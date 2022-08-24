@@ -67,10 +67,10 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 		ASSERT_STREQ(ecsact_meta_package_name(package_id), "test");
 
 		// Our test file only contains 1 component
-		ASSERT_EQ(ecsact_meta_count_components(), 1);
+		ASSERT_EQ(ecsact_meta_count_components(package_id), 1);
 
 		auto comp_id = ecsact_invalid_component_id;
-		ecsact_meta_get_component_ids(1, &comp_id, nullptr);
+		ecsact_meta_get_component_ids(package_id, 1, &comp_id, nullptr);
 		ASSERT_NE(comp_id, ecsact_invalid_component_id);
 		auto compo_id = ecsact_id_cast<ecsact_composite_id>(comp_id);
 
@@ -134,12 +134,17 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 			}},
 		};
 
-		ASSERT_EQ(ecsact_meta_count_systems(), test_system_fns.size());
+		ASSERT_EQ(ecsact_meta_count_systems(package_id), test_system_fns.size());
 		std::vector<ecsact_system_id> sys_ids;
 		sys_ids.resize(test_system_fns.size());
 
 		int32_t out_count = 0;
-		ecsact_meta_get_system_ids(sys_ids.size(), sys_ids.data(), &out_count);
+		ecsact_meta_get_system_ids(
+			package_id,
+			sys_ids.size(),
+			sys_ids.data(),
+			&out_count
+		);
 		ASSERT_EQ(sys_ids.size(), out_count);
 
 		for(auto sys_id : sys_ids) {
