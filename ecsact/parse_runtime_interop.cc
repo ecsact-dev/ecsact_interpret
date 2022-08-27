@@ -8,11 +8,15 @@
 #include <string_view>
 #include <cassert>
 #include <optional>
+#include <stdexcept>
+#include "magic_enum.hpp"
 #include "ecsact/parse.h"
 #include "ecsact/runtime/dynamic.h"
 #include "ecsact/runtime/meta.h"
 
 #include "detail/visit_statement.hh"
+
+using namespace std::string_literals;
 
 std::optional<ecsact_field_id> find_field_by_name
 	( ecsact_composite_id  compo_id
@@ -37,6 +41,39 @@ std::optional<ecsact_field_id> find_field_by_name
 	return {};
 }
 
+std::optional<ecsact_enum_id> find_enum_by_name
+	( ecsact_package_id  package_id
+	, std::string_view   target_enum_name
+	)
+{
+	std::vector<ecsact_enum_id> enum_ids;
+	enum_ids.resize(ecsact_meta_count_enums(package_id));
+	for(auto& enum_id : enum_ids) {
+		std::string enum_name = ecsact_meta_enum_name(enum_id);
+		if(enum_name == target_enum_name) {
+			return enum_id;
+		}
+	}
+
+	return {};
+}
+
+std::optional<ecsact_field_type> find_user_field_type_by_name
+	( ecsact_package_id  package_id
+	, std::string_view   user_type_name
+	)
+{
+	auto enum_id = find_enum_by_name(package_id, user_type_name);
+	if(enum_id) {
+		return ecsact_field_type{
+			.kind = ECSACT_TYPE_KIND_ENUM,
+			.type{.enum_id = *enum_id},
+		};
+	}
+
+	return {};
+}
+
 struct parse_interop_package {
 	ecsact_package_id package_id = (ecsact_package_id)-1;
 	std::string source_file_path;
@@ -48,6 +85,8 @@ struct parse_interop_package {
 	std::unordered_map<int32_t, ecsact_component_id> _system_components;
 	std::unordered_map<std::string, ecsact_component_id> _component_by_name;
 	std::unordered_map<int32_t, ecsact_system_id> _systems;
+	std::unordered_map<int32_t, ecsact_action_id> _actions;
+	std::unordered_map<int32_t, ecsact_enum_id> _enums;
 
 	std::unordered_map<int32_t, ecsact_system_like_id> _system_likes;
 	std::unordered_map<int32_t, ecsact_composite_id> _composites;
@@ -66,6 +105,12 @@ struct parse_interop_package {
 			data.main,
 			data.package_name.data,
 			data.package_name.length
+		);
+
+		ecsact_set_package_source_file_path(
+			package_id,
+			source_file_path.data(),
+			static_cast<int32_t>(source_file_path.size())
 		);
 	}
 
@@ -107,6 +152,52 @@ struct parse_interop_package {
 		_system_likes[statement.id] = sys_like_id;
 
 		return sys_id;
+	}
+
+	ecsact_action_id action_interop
+		( ecsact_statement statement
+		)
+	{
+		auto& data = statement.data.action_statement;
+		auto act_id = ecsact_create_action(
+			package_id,
+			data.action_name.data,
+			data.action_name.length
+		);
+		auto sys_like_id = ecsact_id_cast<ecsact_system_like_id>(act_id);
+		_actions[statement.id] = act_id;
+		_system_likes[statement.id] = sys_like_id;
+
+		return act_id;
+	}
+
+	void enum_interop
+		( ecsact_statement statement
+		)
+	{
+		auto& data = statement.data.enum_statement;
+		auto enum_id = ecsact_create_enum(
+			package_id,
+			data.enum_name.data,
+			data.enum_name.length
+		);
+
+		_enums[statement.id] = enum_id;
+	}
+
+	void enum_value_interop
+		( ecsact_statement context
+		, ecsact_statement statement
+		)
+	{
+		auto& data = statement.data.enum_value_statement;
+		auto enum_id = _enums.at(context.id);
+		auto enum_value_id = ecsact_add_enum_value(
+			enum_id,
+			data.value,
+			data.name.data,
+			data.name.length
+		);
 	}
 
 	void nested_system_interop
@@ -216,10 +307,41 @@ struct parse_interop_package {
 		
 		ecsact_add_field(
 			composite_id,
-			field_name.c_str(),
-			data.field_type,
-			data.length
+			{
+				.kind = ECSACT_TYPE_KIND_BUILTIN,
+				.type{.builtin = data.field_type},
+				.length = data.length,
+			},
+			data.field_name.data,
+			data.field_name.length
 		);
+	}
+
+	void user_type_field_interop
+		( ecsact_statement context
+		, ecsact_statement statement
+		)
+	{
+		auto& composite_id = _composites.at(context.id);
+		auto& data = statement.data.user_type_field_statement;
+
+		std::string field_name(data.field_name.data, data.field_name.length);
+		auto field_type = find_user_field_type_by_name(
+			package_id,
+			std::string_view(data.user_type_name.data, data.user_type_name.length)
+		);
+
+		if(field_type) {
+			field_type->length = data.length;
+			ecsact_add_field(
+				composite_id,
+				*field_type,
+				data.field_name.data,
+				data.field_name.length
+			);
+		} else {
+			// TODO(zaucy): Report error for non existant user type
+		}
 	}
 };
 
@@ -256,8 +378,8 @@ void ecsact_parse_runtime_interop
 				case ECSACT_STATEMENT_UNKNOWN:
 					break;
 				case ECSACT_STATEMENT_PACKAGE:
-					pkg.package_interop(*params.statement);
 					pkg.source_file_path = file_paths[params.source_file_index];
+					pkg.package_interop(*params.statement);
 					break;
 				case ECSACT_STATEMENT_IMPORT:
 					pkg.import_interop(*params.statement);
@@ -267,6 +389,12 @@ void ecsact_parse_runtime_interop
 					break;
 				case ECSACT_STATEMENT_BUILTIN_TYPE_FIELD:
 					pkg.field_interop(*params.context_statement, *params.statement);
+					break;
+				case ECSACT_STATEMENT_USER_TYPE_FIELD:
+					pkg.user_type_field_interop(
+						*params.context_statement,
+						*params.statement
+					);
 					break;
 				case ECSACT_STATEMENT_SYSTEM:
 					if(params.context_statement) {
@@ -290,9 +418,24 @@ void ecsact_parse_runtime_interop
 						*params.statement
 					);
 					break;
-				// case ECSACT_STATEMENT_ACTION:
-				// 	pkg.action_interop(*params.statement);
-				// 	break;
+				case ECSACT_STATEMENT_ACTION:
+					pkg.action_interop(*params.statement);
+					break;
+
+				case ECSACT_STATEMENT_ENUM:
+					pkg.enum_interop(*params.statement);
+					break;
+				case ECSACT_STATEMENT_ENUM_VALUE:
+					pkg.enum_value_interop(
+						*params.context_statement,
+						*params.statement
+					);
+					break;
+				default:
+					throw std::runtime_error(
+						"Unhandled statement type "s +
+						std::string(magic_enum::enum_name(params.statement->type))
+					);
 			}
 
 			return ECSACT_PARSE_CALLBACK_CONTINUE;
