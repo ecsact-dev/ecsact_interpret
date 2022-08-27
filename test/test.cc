@@ -79,12 +79,14 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 			compo_id,
 			std::make_pair("num", [&](ecsact_field_id field_id) {
 				auto type = ecsact_meta_field_type(compo_id, field_id);
-				ASSERT_EQ(type.type, ECSACT_I32);
+				ASSERT_EQ(type.kind, ECSACT_TYPE_KIND_BUILTIN);
+				ASSERT_EQ(type.type.builtin, ECSACT_I32);
 				ASSERT_EQ(type.length, 1);
 			}),
 			std::make_pair("test_entity", [&](ecsact_field_id field_id) {
 				auto type = ecsact_meta_field_type(compo_id, field_id);
-				ASSERT_EQ(type.type, ECSACT_ENTITY_TYPE);
+				ASSERT_EQ(type.kind, ECSACT_TYPE_KIND_BUILTIN);
+				ASSERT_EQ(type.type.builtin, ECSACT_ENTITY_TYPE);
 				ASSERT_EQ(type.length, 1);
 			})
 		);
