@@ -45,6 +45,8 @@ struct system_like {
 
 	std::unordered_map<ecsact_component_id, cap_entry> caps;
 	ecsact_system_like_id parent_system_id = (ecsact_system_like_id)-1;
+
+	/** in execution order */
 	std::vector<ecsact_system_id> nested_systems;
 };
 
@@ -85,6 +87,9 @@ struct package_def {
 	std::vector<ecsact_action_id> actions;
 	std::vector<ecsact_component_id> components;
 	std::vector<ecsact_enum_id> enums;
+
+	/** in execution order */
+	std::vector<ecsact_system_like_id> top_level_systems;
 };
 
 static std::atomic_int32_t last_id = 0;
@@ -252,9 +257,11 @@ ecsact_system_id ecsact_create_system
 	)
 {
 	auto& pkg_def = package_defs.at(owner);
-	auto sys_id = next_id<ecsact_system_id>();
-	auto decl_id = ecsact_id_cast<ecsact_decl_id>(sys_id);
+	const auto sys_id = next_id<ecsact_system_id>();
+	const auto decl_id = ecsact_id_cast<ecsact_decl_id>(sys_id);
+	const auto sys_like_id = ecsact_id_cast<ecsact_system_like_id>(sys_id);
 	pkg_def.systems.push_back(sys_id);
+	pkg_def.top_level_systems.push_back(sys_like_id);
 	set_package_owner(sys_id, owner);
 	auto& def = sys_defs[sys_id];
 	def.name = std::string_view(system_name, system_name_len);
@@ -274,9 +281,11 @@ ecsact_action_id ecsact_create_action
 	)
 {
 	auto& pkg_def = package_defs.at(owner);
-	auto act_id = next_id<ecsact_action_id>();
-	auto decl_id = ecsact_id_cast<ecsact_decl_id>(act_id);
+	const auto act_id = next_id<ecsact_action_id>();
+	const auto decl_id = ecsact_id_cast<ecsact_decl_id>(act_id);
+	const auto sys_like_id = ecsact_id_cast<ecsact_system_like_id>(act_id);
 	pkg_def.actions.push_back(act_id);
+	pkg_def.top_level_systems.push_back(sys_like_id);
 	set_package_owner(act_id, owner);
 	auto& def = act_defs[act_id];
 	def.name = std::string_view(action_name, action_name_len);
@@ -840,4 +849,34 @@ ecsact_system_like_id ecsact_meta_get_parent_system_id
 		ecsact_id_cast<ecsact_system_like_id>(child_system_id)
 	);
 	return def.parent_system_id;
+}
+
+int32_t ecsact_meta_count_top_level_systems
+	( ecsact_package_id package_id
+	)
+{
+	auto& pkg_def = package_defs.at(package_id);
+	return static_cast<int32_t>(pkg_def.top_level_systems.size());
+}
+
+void ecsact_meta_get_top_level_systems
+	( ecsact_package_id       package_id
+	, int32_t                 max_systems_count
+	, ecsact_system_like_id*  out_systems
+	, int32_t*                out_systems_count
+	)
+{
+	auto& pkg_def = package_defs.at(package_id);
+
+	auto itr = pkg_def.top_level_systems.begin();
+	for(int i=0; max_systems_count > i; ++i, ++itr) {
+		if(itr == pkg_def.top_level_systems.end()) {
+			break;
+		}
+		out_systems[i] = *itr;
+	}
+
+	if(out_systems_count != nullptr) {
+		*out_systems_count = static_cast<int32_t>(pkg_def.top_level_systems.size());
+	}
 }
