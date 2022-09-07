@@ -429,11 +429,26 @@ int32_t ecsact_meta_count_components
 	return static_cast<int32_t>(pkg_def.components.size());
 }
 
+int32_t ecsact_meta_count_transients
+	( ecsact_package_id package_id
+	)
+{
+	auto& pkg_def = package_defs.at(package_id);
+	return static_cast<int32_t>(pkg_def.transients.size());
+}
+
 const char* ecsact_meta_component_name
 	( ecsact_component_id comp_id
 	)
 {
 	return comp_defs.at(comp_id).name.c_str();
+}
+
+const char* ecsact_meta_transient_name
+	( ecsact_transient_id trans
+	)
+{
+	return trans_defs.at(trans).name.c_str();
 }
 
 const char* ecsact_meta_system_name
@@ -570,6 +585,25 @@ void ecsact_meta_get_component_ids
 
 	if(out_component_count != nullptr) {
 		*out_component_count = static_cast<int32_t>(pkg_def.components.size());
+	}
+}
+
+void ecsact_meta_get_transient_ids
+	( ecsact_package_id     package_id
+	, int32_t               max_transient_count
+	, ecsact_transient_id*  out_transient_ids
+	, int32_t*              out_transient_count
+	)
+{
+	auto& pkg_def = package_defs.at(package_id);
+	auto itr = pkg_def.transients.begin();
+	for(int32_t i=0; max_transient_count > i && itr != pkg_def.transients.end(); ++i) {
+		out_transient_ids[i] = *itr;
+		++itr;
+	}
+
+	if(out_transient_count != nullptr) {
+		*out_transient_count = static_cast<int32_t>(pkg_def.transients.size());
 	}
 }
 
