@@ -103,7 +103,7 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 
 				ASSERT_EQ(ecsact_meta_system_capabilities_count(sys_like_id), 1);
 
-				std::array sys_cap_comp_ids{ecsact_invalid_component_id};
+				std::array sys_cap_comp_ids{(ecsact_component_like_id)-1};
 				std::array sys_caps{ecsact_system_capability{}};
 				ecsact_meta_system_capabilities(
 					sys_like_id,
@@ -113,7 +113,10 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 					nullptr
 				);
 
-				ASSERT_EQ(sys_cap_comp_ids[0], comp_id);
+				ASSERT_EQ(
+					sys_cap_comp_ids[0],
+					ecsact_id_cast<ecsact_component_like_id>(comp_id)
+				);
 				ASSERT_EQ(sys_caps[0], ECSACT_SYS_CAP_READWRITE);
 			}},
 			{"TestNestedSystem", [&](ecsact_system_id sys_id) {
@@ -121,7 +124,7 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 
 				ASSERT_EQ(ecsact_meta_system_capabilities_count(sys_like_id), 1);
 
-				std::array sys_cap_comp_ids{ecsact_invalid_component_id};
+				std::array sys_cap_comp_ids{(ecsact_component_like_id)-1};
 				std::array sys_caps{ecsact_system_capability{}};
 				ecsact_meta_system_capabilities(
 					sys_like_id,
@@ -131,7 +134,10 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 					nullptr
 				);
 
-				ASSERT_EQ(sys_cap_comp_ids[0], comp_id);
+				ASSERT_EQ(
+					sys_cap_comp_ids[0],
+					ecsact_id_cast<ecsact_component_like_id>(comp_id)
+				);
 				ASSERT_EQ(sys_caps[0], ECSACT_SYS_CAP_READWRITE);
 			}},
 		};
