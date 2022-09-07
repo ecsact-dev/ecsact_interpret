@@ -28,13 +28,21 @@ public:
 	}
 };
 
-struct comp_def : composite {
+struct component_like : composite {
+
+};
+
+struct comp_def : component_like {
+	std::string name;
+};
+
+struct trans_def : component_like {
 	std::string name;
 };
 
 struct system_like {
 	using cap_comp_map_t = std::unordered_map
-		< ecsact_component_id
+		< ecsact_component_like_id
 		, ecsact_system_capability
 		>;
 
@@ -43,7 +51,7 @@ struct system_like {
 		std::unordered_map<ecsact_field_id, cap_comp_map_t> assoc;
 	};
 
-	std::unordered_map<ecsact_component_id, cap_entry> caps;
+	std::unordered_map<ecsact_component_like_id, cap_entry> caps;
 	ecsact_system_like_id parent_system_id = (ecsact_system_like_id)-1;
 
 	/** in execution order */
@@ -86,6 +94,7 @@ struct package_def {
 	std::vector<ecsact_system_id> systems;
 	std::vector<ecsact_action_id> actions;
 	std::vector<ecsact_component_id> components;
+	std::vector<ecsact_transient_id> transients;
 	std::vector<ecsact_enum_id> enums;
 
 	/** in execution order */
@@ -97,6 +106,7 @@ static std::unordered_map<ecsact_decl_id, std::string> full_names;
 static std::unordered_map<ecsact_package_id, package_def> package_defs;
 static std::unordered_map<ecsact_decl_id, ecsact_package_id> def_owner_map;
 static std::unordered_map<ecsact_component_id, comp_def> comp_defs;
+static std::unordered_map<ecsact_transient_id, trans_def> trans_defs;
 static std::unordered_map<ecsact_system_id, system_def> sys_defs;
 static std::unordered_map<ecsact_action_id, action_def> act_defs;
 static std::unordered_map<ecsact_enum_id, enum_def> enum_defs;
@@ -130,6 +140,10 @@ static composite& get_composite(ecsact_composite_id id) {
 		return comp_defs.at((ecsact_component_id)id);
 	}
 
+	if(trans_defs.contains((ecsact_transient_id)id)) {
+		return trans_defs.at((ecsact_transient_id)id);
+	}
+
 	if(act_defs.contains((ecsact_action_id)id)) {
 		return act_defs.at((ecsact_action_id)id);
 	}
@@ -147,6 +161,18 @@ static system_like& get_system_like(ecsact_system_like_id id) {
 	}
 
 	throw std::invalid_argument("Invalid system-like ID");
+}
+
+static component_like& get_component_like(ecsact_component_like_id id) {
+	if(comp_defs.contains((ecsact_component_id)id)) {
+		return comp_defs.at((ecsact_component_id)id);
+	}
+
+	if(trans_defs.contains((ecsact_transient_id)id)) {
+		return trans_defs.at((ecsact_transient_id)id);
+	}
+
+	throw std::invalid_argument("Invalid component-like ID");
 }
 
 template<typename T>
@@ -248,6 +274,24 @@ ecsact_component_id ecsact_create_component
 	full_names[decl_id] = pkg_def.name + "." + def.name;
 
 	return comp_id;
+}
+
+ecsact_transient_id ecsact_create_transient
+	( ecsact_package_id  owner
+	, const char*        transient_name
+	, int32_t            transient_name_len
+	)
+{
+	auto& pkg_def = package_defs.at(owner);
+	auto trans_id = next_id<ecsact_transient_id>();
+	auto decl_id = ecsact_id_cast<ecsact_decl_id>(trans_id);
+	pkg_def.transients.push_back(trans_id);
+	set_package_owner(trans_id, owner);
+	auto& def = trans_defs[trans_id];
+	def.name = std::string_view(transient_name, transient_name_len);
+	full_names[decl_id] = pkg_def.name + "." + def.name;
+
+	return trans_id;
 }
 
 ecsact_system_id ecsact_create_system
@@ -597,21 +641,21 @@ ecsact_field_type ecsact_meta_field_type
 
 void ecsact_set_system_capability
 	( ecsact_system_like_id     sys_id
-	, ecsact_component_id       comp_id
+	, ecsact_component_like_id  comp_like_id
 	, ecsact_system_capability  cap
 	)
 {
 	auto& def = get_system_like(sys_id);
-	def.caps[comp_id].cap = cap;
+	def.caps[comp_like_id].cap = cap;
 }
 
 void ecsact_unset_system_capability
-	( ecsact_system_like_id  sys_id
-	, ecsact_component_id    comp_id
+	( ecsact_system_like_id     sys_id
+	, ecsact_component_like_id  comp_like_id
 	)
 {
 	auto& def = get_system_like(sys_id);
-	def.caps.erase(comp_id);
+	def.caps.erase(comp_like_id);
 }
 
 int32_t ecsact_meta_system_capabilities_count
@@ -625,7 +669,7 @@ int32_t ecsact_meta_system_capabilities_count
 void ecsact_meta_system_capabilities
 	( ecsact_system_like_id      system_id
 	, int32_t                    max_capabilities_count
-	, ecsact_component_id*       out_capability_component_ids
+	, ecsact_component_like_id*  out_capability_component_ids
 	, ecsact_system_capability*  out_capabilities
 	, int32_t*                   out_capabilities_count
 	)
@@ -650,9 +694,9 @@ void ecsact_meta_system_capabilities
 
 void ecsact_set_system_association_capability
 	( ecsact_system_like_id     sys_id
-	, ecsact_component_id       comp_id
+	, ecsact_component_like_id  comp_id
 	, ecsact_field_id           with_entity_field_id
-	, ecsact_component_id       with_comp_id
+	, ecsact_component_like_id  with_comp_id
 	, ecsact_system_capability  with_comp_cap
 	)
 {
@@ -662,10 +706,10 @@ void ecsact_set_system_association_capability
 }
 
 void ecsact_unset_system_association_capability
-	( ecsact_system_like_id   sys_id
-	, ecsact_component_id     comp_id
-	, ecsact_field_id         with_entity_field_id
-	, ecsact_component_id     with_comp_id
+	( ecsact_system_like_id     sys_id
+	, ecsact_component_like_id  comp_id
+	, ecsact_field_id           with_entity_field_id
+	, ecsact_component_like_id  with_comp_id
 	)
 {
 	auto& def = get_system_like(sys_id);

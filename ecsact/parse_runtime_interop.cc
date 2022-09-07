@@ -82,14 +82,16 @@ struct parse_interop_package {
 
 	// key is statement ID, value is declaration ID
 	std::unordered_map<int32_t, ecsact_component_id> _components;
-	std::unordered_map<int32_t, ecsact_component_id> _system_components;
-	std::unordered_map<std::string, ecsact_component_id> _component_by_name;
+	std::unordered_map<int32_t, ecsact_transient_id> _transients;
+	std::unordered_map<int32_t, ecsact_component_like_id> _system_components;
+	std::unordered_map<std::string, ecsact_component_like_id> _component_like_by_name;
 	std::unordered_map<int32_t, ecsact_system_id> _systems;
 	std::unordered_map<int32_t, ecsact_action_id> _actions;
 	std::unordered_map<int32_t, ecsact_enum_id> _enums;
 
 	std::unordered_map<int32_t, ecsact_system_like_id> _system_likes;
 	std::unordered_map<int32_t, ecsact_composite_id> _composites;
+	std::unordered_map<int32_t, ecsact_component_like_id> _component_likes;
 
 	std::unordered_map<int32_t, ecsact_system_like_id> _sys_comp_belong_to;
 	std::unordered_map<int32_t, ecsact_field_id> _field_ids;
@@ -130,11 +132,37 @@ struct parse_interop_package {
 			data.component_name.data,
 			data.component_name.length
 		);
+		auto comp_like_id = ecsact_id_cast<ecsact_component_like_id>(comp_id);
 		_components[statement.id] = comp_id;
 		_composites[statement.id] = ecsact_id_cast<ecsact_composite_id>(comp_id);
 
-		auto comp_name = std::string(data.component_name.data, data.component_name.length);
-		_component_by_name[comp_name] = comp_id;
+		auto comp_name = std::string(
+			data.component_name.data,
+			data.component_name.length
+		);
+		_component_like_by_name[comp_name] = comp_like_id;
+	}
+
+	void transient_interop
+		( ecsact_statement statement
+		)
+	{
+		auto& data = statement.data.transient_statement;
+		auto trans_id = ecsact_create_transient(
+			package_id,
+			data.transient_name.data,
+			data.transient_name.length
+		);
+		auto comp_like_id = ecsact_id_cast<ecsact_component_like_id>(trans_id);
+		_transients[statement.id] = trans_id;
+		_composites[statement.id] = ecsact_id_cast<ecsact_composite_id>(trans_id);
+		_component_likes[statement.id] = comp_like_id;
+
+		auto trans_name = std::string(
+			data.transient_name.data,
+			data.transient_name.length
+		);
+		_component_like_by_name[trans_name] = comp_like_id;
 	}
 
 	ecsact_system_id system_interop
@@ -220,8 +248,8 @@ struct parse_interop_package {
 			context.data.system_component_statement.component_name.data,
 			context.data.system_component_statement.component_name.length
 		);
-		auto comp_id = _component_by_name.at(comp_name);
-		auto compo_id = ecsact_id_cast<ecsact_composite_id>(comp_id);
+		auto comp_like_id = _component_like_by_name.at(comp_name);
+		auto compo_id = ecsact_id_cast<ecsact_composite_id>(comp_like_id);
 		auto& data = statement.data.system_with_entity_statement;
 
 		std::string field_name(
@@ -246,8 +274,8 @@ struct parse_interop_package {
 			data.component_name.length
 		);
 
-		auto comp_id = _component_by_name.at(component_name);
-		_system_components[statement.id] = comp_id;
+		auto comp_like_id = _component_like_by_name.at(component_name);
+		_system_components[statement.id] = comp_like_id;
 
 		ecsact_system_like_id parent_sys_like_id;
 		if(context.type == ECSACT_STATEMENT_SYSTEM_WITH_ENTITY) {
@@ -256,7 +284,7 @@ struct parse_interop_package {
 				parent_sys_like_id,
 				_system_components.at(context.id),
 				_field_ids.at(context.id),
-				comp_id,
+				comp_like_id,
 				data.capability
 			);
 		} else {
@@ -267,7 +295,7 @@ struct parse_interop_package {
 			}
 			ecsact_set_system_capability(
 				parent_sys_like_id,
-				comp_id,
+				comp_like_id,
 				data.capability
 			);
 		}
@@ -386,6 +414,9 @@ void ecsact_parse_runtime_interop
 					break;
 				case ECSACT_STATEMENT_COMPONENT:
 					pkg.component_interop(*params.statement);
+					break;
+				case ECSACT_STATEMENT_TRANSIENT:
+					pkg.transient_interop(*params.statement);
 					break;
 				case ECSACT_STATEMENT_BUILTIN_TYPE_FIELD:
 					pkg.field_interop(*params.context_statement, *params.statement);
