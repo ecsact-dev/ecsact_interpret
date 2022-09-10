@@ -51,7 +51,17 @@ struct system_like {
 		std::unordered_map<ecsact_field_id, cap_comp_map_t> assoc;
 	};
 
+	struct gen_entry {
+		ecsact_component_id comp_id;
+		ecsact_system_generate flag;
+	};
+
 	std::unordered_map<ecsact_component_like_id, cap_entry> caps;
+	using generates_t = std::unordered_map
+		< ecsact_system_generates_id
+		, std::unordered_map<ecsact_component_id, ecsact_system_generate>
+		>;
+	generates_t generates;
 	ecsact_system_like_id parent_system_id = (ecsact_system_like_id)-1;
 
 	/** in execution order */
@@ -956,5 +966,116 @@ void ecsact_meta_get_top_level_systems
 
 	if(out_systems_count != nullptr) {
 		*out_systems_count = static_cast<int32_t>(pkg_def.top_level_systems.size());
+	}
+}
+
+ecsact_system_generates_id ecsact_add_system_generates
+	( ecsact_system_like_id system_id
+	)
+{
+	auto& sys_like_def = get_system_like(system_id);
+	auto gen_id = next_id<ecsact_system_generates_id>();
+	sys_like_def.generates[gen_id] = {};
+	return gen_id;
+}
+
+void ecsact_remove_system_generates
+	( ecsact_system_like_id       system_id
+	, ecsact_system_generates_id  generates_id
+	)
+{
+	auto& sys_like_def = get_system_like(system_id);
+	sys_like_def.generates.erase(generates_id);
+}
+
+void ecsact_system_generates_set_component
+	( ecsact_system_like_id       system_id
+	, ecsact_system_generates_id  generates_id
+	, ecsact_component_id         component_id
+	, ecsact_system_generate      generate_flag
+	)
+{
+	auto& sys_like_def = get_system_like(system_id);
+	auto& gen_comps = sys_like_def.generates.at(generates_id);
+	gen_comps[component_id] = generate_flag;
+}
+
+void ecsact_system_generates_unset_component
+	( ecsact_system_like_id       system_id
+	, ecsact_system_generates_id  generates_id
+	, ecsact_component_id         component_id
+	)
+{
+	auto& sys_like_def = get_system_like(system_id);
+	auto& gen_comps = sys_like_def.generates.at(generates_id);
+	gen_comps.erase(component_id);
+}
+
+int32_t ecsact_meta_count_system_generates_ids
+	( ecsact_system_like_id system_id
+	)
+{
+	auto& sys_like_def = get_system_like(system_id);
+	return static_cast<int32_t>(sys_like_def.generates.size());
+}
+
+void ecsact_meta_system_generates_ids
+	( ecsact_system_like_id        system_id
+	, int32_t                      max_generates_ids_count
+	, ecsact_system_generates_id*  out_generates_ids
+	, int32_t*                     out_generates_ids_count
+	)
+{
+	auto& sys_like_def = get_system_like(system_id);
+
+	auto itr = sys_like_def.generates.begin();
+	for(int i=0; max_generates_ids_count > i; ++i, ++itr) {
+		if(itr == sys_like_def.generates.end()) {
+			break;
+		}
+
+		out_generates_ids[i] = itr->first;
+	}
+
+	if(out_generates_ids_count != nullptr) {
+		*out_generates_ids_count =
+			static_cast<int32_t>(sys_like_def.generates.size());
+	}
+}
+
+int32_t ecsact_meta_count_system_generates_components
+	( ecsact_system_like_id       system_id
+	, ecsact_system_generates_id  generates_id
+	)
+{
+	auto& sys_like_def = get_system_like(system_id);
+	auto& gen_def = sys_like_def.generates.at(generates_id);
+	return static_cast<int32_t>(gen_def.size());
+}
+
+void ecsact_meta_system_generates_components
+	( ecsact_system_like_id       system_id
+	, ecsact_system_generates_id  generates_id
+	, int32_t                     max_components_count
+	, ecsact_component_id*        out_component_ids
+	, ecsact_system_generate*     out_component_generate_flags
+	, int32_t*                    out_components_count
+	)
+{
+	auto& sys_like_def = get_system_like(system_id);
+	auto& gen_def = sys_like_def.generates.at(generates_id);
+
+	auto itr = gen_def.begin();
+	for(int i=0; max_components_count > i; ++i, ++itr) {
+		if(itr == gen_def.end()) {
+			break;
+		}
+
+		out_component_ids[i] = itr->first;
+		out_component_generate_flags[i] = itr->second;
+	}
+
+	if(out_components_count != nullptr) {
+		*out_components_count = static_cast<int32_t>(gen_def.size());
 	}
 }
