@@ -509,11 +509,11 @@ void ecsact_parse_runtime_interop
 						*params.statement
 					);
 					break;
-				// default:
-				// 	throw std::runtime_error(
-				// 		"Unhandled statement type "s +
-				// 		std::string(magic_enum::enum_name(params.statement->type))
-				// 	);
+				default:
+					throw std::runtime_error(
+						"Unhandled statement type "s +
+						std::string(magic_enum::enum_name(params.statement->type))
+					);
 			}
 
 			return ECSACT_PARSE_CALLBACK_CONTINUE;
