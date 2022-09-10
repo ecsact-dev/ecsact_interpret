@@ -90,10 +90,11 @@ struct parse_interop_package {
 	std::unordered_map<int32_t, ecsact_enum_id> _enums;
 
 	std::unordered_map<int32_t, ecsact_system_like_id> _system_likes;
+	std::unordered_map<int32_t, ecsact_system_generates_id> _system_generates;
 	std::unordered_map<int32_t, ecsact_composite_id> _composites;
 	std::unordered_map<int32_t, ecsact_component_like_id> _component_likes;
 
-	std::unordered_map<int32_t, ecsact_system_like_id> _sys_comp_belong_to;
+	std::unordered_map<int32_t, ecsact_system_like_id> _belong_to_sys;
 	std::unordered_map<int32_t, ecsact_field_id> _field_ids;
 
 	void package_interop
@@ -243,7 +244,7 @@ struct parse_interop_package {
 		, ecsact_statement statement
 		)
 	{
-		auto sys_like_id = _sys_comp_belong_to.at(context.id);
+		auto sys_like_id = _belong_to_sys.at(context.id);
 		auto comp_name = std::string(
 			context.data.system_component_statement.component_name.data,
 			context.data.system_component_statement.component_name.length
@@ -279,7 +280,7 @@ struct parse_interop_package {
 
 		ecsact_system_like_id parent_sys_like_id;
 		if(context.type == ECSACT_STATEMENT_SYSTEM_WITH_ENTITY) {
-			parent_sys_like_id = _sys_comp_belong_to.at(statement.id);
+			parent_sys_like_id = _belong_to_sys.at(statement.id);
 			ecsact_set_system_association_capability(
 				parent_sys_like_id,
 				_system_components.at(context.id),
@@ -289,7 +290,7 @@ struct parse_interop_package {
 			);
 		} else {
 			if(context.type == ECSACT_STATEMENT_SYSTEM_COMPONENT) {
-				parent_sys_like_id = _sys_comp_belong_to.at(context.id);
+				parent_sys_like_id = _belong_to_sys.at(context.id);
 			} else {
 				parent_sys_like_id = _system_likes.at(context.id);
 			}
@@ -300,7 +301,7 @@ struct parse_interop_package {
 			);
 		}
 
-		_sys_comp_belong_to[statement.id] = parent_sys_like_id;
+		_belong_to_sys[statement.id] = parent_sys_like_id;
 
 		// Treating the shorthand with syntax as a faux with statement
 		if(data.with_entity_field_name.length > 0) {
@@ -369,6 +370,40 @@ struct parse_interop_package {
 			);
 		} else {
 			// TODO(zaucy): Report error for non existant user type
+		}
+	}
+
+	void generates_interop
+		( ecsact_statement context
+		, ecsact_statement statement
+		)
+	{
+		auto sys_like_id = _system_likes.at(context.id);
+		auto sys_gen_id = ecsact_add_system_generates(sys_like_id);
+		_system_generates[statement.id] = sys_gen_id;
+	}
+
+	void entity_constraint_interop
+		( ecsact_statement context
+		, ecsact_statement statement
+		)
+	{
+		auto& data = statement.data.entity_constraint_statement;
+
+		if(context.type == ECSACT_STATEMENT_SYSTEM_GENERATES) {
+			auto sys_like_id = _belong_to_sys.at(context.id);
+			auto sys_gen_id = _system_generates.at(context.id);
+			std::string constraint_component_name(
+				data.constraint_component_name.data,
+				data.constraint_component_name.length
+			);
+			auto comp_id = _component_like_by_name.at(constraint_component_name);
+			ecsact_system_generates_set_component(
+				sys_like_id,
+				sys_gen_id,
+				static_cast<ecsact_component_id>(comp_id),
+				data.optional ? ECSACT_SYS_GEN_OPTIONAL : ECSACT_SYS_GEN_REQUIRED
+			);
 		}
 	}
 };
@@ -458,6 +493,18 @@ void ecsact_parse_runtime_interop
 					break;
 				case ECSACT_STATEMENT_ENUM_VALUE:
 					pkg.enum_value_interop(
+						*params.context_statement,
+						*params.statement
+					);
+					break;
+				case ECSACT_STATEMENT_SYSTEM_GENERATES:
+					pkg.generates_interop(
+						*params.context_statement,
+						*params.statement
+					);
+					break;
+				case ECSACT_STATEMENT_ENTITY_CONSTRAINT:
+					pkg.entity_constraint_interop(
 						*params.context_statement,
 						*params.statement
 					);
