@@ -380,6 +380,7 @@ struct parse_interop_package {
 	{
 		auto sys_like_id = _system_likes.at(context.id);
 		auto sys_gen_id = ecsact_add_system_generates(sys_like_id);
+		_belong_to_sys[statement.id] = sys_like_id;
 		_system_generates[statement.id] = sys_gen_id;
 	}
 
