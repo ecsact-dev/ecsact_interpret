@@ -4,9 +4,9 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "ecsact_runtime",
-    sha256 = "32032520605bc3db1ed1a1cba3a35e9b7721180e12cc18f25b47fbba2d376ab1",
-    strip_prefix = "ecsact_runtime-5049d6300e2091a7bbb5952b9af8ce1f790a8f20",
-    url = "https://github.com/ecsact-dev/ecsact_runtime/archive/5049d6300e2091a7bbb5952b9af8ce1f790a8f20.zip",
+    sha256 = "7e7ad988f8c0d300411f2002252b6fb9a1227bd5e5d3f3e8cc258995a70d1865",
+    strip_prefix = "ecsact_runtime-a0a7833b91e3fc7a8c833adb7ed4f600262f00d0",
+    url = "https://github.com/ecsact-dev/ecsact_runtime/archive/a0a7833b91e3fc7a8c833adb7ed4f600262f00d0.zip",
 )
 
 http_archive(
