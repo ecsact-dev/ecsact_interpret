@@ -193,6 +193,7 @@ struct parse_interop_package {
 			data.action_name.data,
 			data.action_name.length
 		);
+		_composites[statement.id] = ecsact_id_cast<ecsact_composite_id>(act_id);
 		auto sys_like_id = ecsact_id_cast<ecsact_system_like_id>(act_id);
 		_actions[statement.id] = act_id;
 		_system_likes[statement.id] = sys_like_id;
