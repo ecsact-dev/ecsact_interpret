@@ -6,6 +6,7 @@
 #include <functional>
 #include "ecsact/parse_runtime_interop.h"
 #include "ecsact/runtime/meta.h"
+#include "ecsact/runtime/meta.hh"
 #include "bazel_sundry/runfiles.hh"
 
 namespace fs = std::filesystem;
@@ -118,6 +119,18 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 					ecsact_id_cast<ecsact_component_like_id>(comp_id)
 				);
 				ASSERT_EQ(sys_caps[0], ECSACT_SYS_CAP_READWRITE);
+
+				auto assoc_fields = ecsact::meta::system_association_fields(
+					sys_like_id,
+					ecsact_id_cast<ecsact_component_like_id>(comp_id)
+				);
+				ASSERT_EQ(assoc_fields.size(), 1);
+				auto field_id = *assoc_fields.begin();
+				auto assoc_field_name = ecsact_meta_field_name(
+					ecsact_id_cast<ecsact_composite_id>(comp_id),
+					field_id
+				);
+				ASSERT_STREQ(assoc_field_name, "test_entity");
 			}},
 			{"TestNestedSystem", [&](ecsact_system_id sys_id) {
 				auto sys_like_id = ecsact_id_cast<ecsact_system_like_id>(sys_id);

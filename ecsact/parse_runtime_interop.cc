@@ -295,6 +295,7 @@ struct parse_interop_package {
 			} else {
 				parent_sys_like_id = _system_likes.at(context.id);
 			}
+
 			ecsact_set_system_capability(
 				parent_sys_like_id,
 				comp_like_id,
@@ -316,7 +317,7 @@ struct parse_interop_package {
 			};
 
 			ecsact_statement faux_with;
-			faux_with.id = -1;
+			faux_with.id = statement.id;
 			faux_with.type = ECSACT_STATEMENT_SYSTEM_WITH_ENTITY;
 			faux_with.data.system_with_entity_statement.with_entity_field_name =
 				data.with_entity_field_name;
