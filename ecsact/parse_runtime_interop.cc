@@ -95,7 +95,7 @@ struct parse_interop_package {
 	std::unordered_map<int32_t, ecsact_component_like_id> _component_likes;
 
 	std::unordered_map<int32_t, ecsact_system_like_id> _belong_to_sys;
-	std::unordered_map<int32_t, ecsact_field_id> _field_ids;
+	std::unordered_map<int32_t, ecsact_field_id> _with_field_ids;
 
 	void package_interop
 		( ecsact_statement statement
@@ -262,7 +262,7 @@ struct parse_interop_package {
 		auto field_id = find_field_by_name(compo_id, field_name);
 		// TODO(zaucy): Report invalid field name error
 		assert(field_id);
-		_field_ids[statement.id] = *field_id;
+		_with_field_ids[statement.id] = *field_id;
 	}
 
 	void system_component_interop
@@ -280,12 +280,15 @@ struct parse_interop_package {
 		_system_components[statement.id] = comp_like_id;
 
 		ecsact_system_like_id parent_sys_like_id;
-		if(context.type == ECSACT_STATEMENT_SYSTEM_WITH_ENTITY) {
-			parent_sys_like_id = _belong_to_sys.at(statement.id);
+		const bool is_with_context =
+			context.type == ECSACT_STATEMENT_SYSTEM_WITH_ENTITY ||
+			_with_field_ids.contains(context.id);
+		if(is_with_context) {
+			parent_sys_like_id = _belong_to_sys.at(context.id);
 			ecsact_set_system_association_capability(
 				parent_sys_like_id,
 				_system_components.at(context.id),
-				_field_ids.at(context.id),
+				_with_field_ids.at(context.id),
 				comp_like_id,
 				data.capability
 			);
@@ -295,6 +298,7 @@ struct parse_interop_package {
 			} else {
 				parent_sys_like_id = _system_likes.at(context.id);
 			}
+
 			ecsact_set_system_capability(
 				parent_sys_like_id,
 				comp_like_id,
@@ -316,7 +320,7 @@ struct parse_interop_package {
 			};
 
 			ecsact_statement faux_with;
-			faux_with.id = -1;
+			faux_with.id = statement.id;
 			faux_with.type = ECSACT_STATEMENT_SYSTEM_WITH_ENTITY;
 			faux_with.data.system_with_entity_statement.with_entity_field_name =
 				data.with_entity_field_name;
