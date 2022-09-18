@@ -1,16 +1,17 @@
 #include "ecsact/runtime/dynamic.h"
 #include "ecsact/runtime/meta.h"
 
+#include <map>
 #include <string>
 #include <atomic>
-#include <variant>
 #include <vector>
+#include <limits>
+#include <variant>
+#include <cassert>
+#include <optional>
 #include <exception>
 #include <stdexcept>
 #include <unordered_map>
-#include <map>
-#include <limits>
-#include <cassert>
 
 struct field {
 	std::string name;
@@ -120,6 +121,7 @@ static std::unordered_map<ecsact_transient_id, trans_def> trans_defs;
 static std::unordered_map<ecsact_system_id, system_def> sys_defs;
 static std::unordered_map<ecsact_action_id, action_def> act_defs;
 static std::unordered_map<ecsact_enum_id, enum_def> enum_defs;
+static std::optional<ecsact_package_id> main_package_id;
 
 template<typename T>
 static ecsact_package_id owner_package_id(T id) {
@@ -198,9 +200,19 @@ ecsact_package_id ecsact_create_package
 {
 	auto pkg_id = next_id<ecsact_package_id>();
 	auto& pkg = package_defs[pkg_id];
-	pkg.main = main_package;
 	pkg.name = std::string_view(package_name, package_name_len);
+	if(main_package) {
+		main_package_id = pkg_id;
+	}
 	return pkg_id;
+}
+
+ecsact_package_id ecsact_meta_main_package() {
+	if(main_package_id) {
+		return *main_package_id;
+	}
+
+	return (ecsact_package_id)-1;
 }
 
 void ecsact_destroy_package
