@@ -695,6 +695,76 @@ ecsact_field_type ecsact_meta_field_type
 	return field.type;
 }
 
+static auto builtin_type_size
+	( ecsact_builtin_type builtin_type
+	)
+{
+	switch(builtin_type) {
+		case ECSACT_BOOL:
+		case ECSACT_I8:
+		case ECSACT_U8:
+			return 1;
+		case ECSACT_I16:
+		case ECSACT_U16:
+			return 2;
+		case ECSACT_I32:
+		case ECSACT_U32:
+		case ECSACT_F32:
+			return 4;
+		case ECSACT_ENTITY_TYPE:
+			return 4;
+	}
+}
+
+static auto enum_type_size
+	( ecsact_enum_id enum_id
+	)
+{
+	return builtin_type_size(ecsact_meta_enum_storage_type(enum_id));
+}
+
+static auto field_type_size
+	( ecsact_field_type type
+	)
+{
+	auto base_size = 0;
+	switch(type.kind) {
+		case ECSACT_TYPE_KIND_BUILTIN:
+			base_size = builtin_type_size(type.type.builtin);
+			break;
+		case ECSACT_TYPE_KIND_ENUM:
+			base_size = enum_type_size(type.type.enum_id);
+			break;
+	}
+
+	return base_size * type.length;
+}
+
+int32_t ecsact_meta_field_offset
+	( ecsact_composite_id  composite_id
+	, ecsact_field_id      field_id
+	)
+{
+	auto& def = get_composite(composite_id);
+	auto largest_field_size = 0;
+	auto current_field_index = 0;
+	auto field_index = 0;
+	for(auto& field : def.fields) {
+		auto size = field_type_size(field.second.type);
+		if(size > largest_field_size) {
+			largest_field_size = size;
+		}
+
+		if(field.first == field_id) {
+			field_index = current_field_index;
+		}
+
+		current_field_index += 1;
+	}
+
+	return static_cast<int32_t>(field_index * largest_field_size);
+}
+
 void ecsact_set_system_capability
 	( ecsact_system_like_id     sys_id
 	, ecsact_component_like_id  comp_like_id
