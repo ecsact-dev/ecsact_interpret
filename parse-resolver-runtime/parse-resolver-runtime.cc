@@ -864,6 +864,10 @@ void ecsact_remove_child_system
 
 	child_def.parent_system_id = (ecsact_system_like_id)-1;
 	if(itr != parent_def.nested_systems.end()) {
+		auto& pkg_def = package_defs.at(owner_package_id(parent));
+		pkg_def.top_level_systems.push_back(
+			ecsact_id_cast<ecsact_system_like_id>(*itr)
+		);
 		parent_def.nested_systems.erase(itr);
 	}
 
@@ -890,6 +894,16 @@ void ecsact_add_child_system
 	
 	child_def.parent_system_id = parent;
 	parent_def.nested_systems.push_back(child);
+
+	auto iter = std::find(
+		pkg_def.top_level_systems.begin(),
+		pkg_def.top_level_systems.end(),
+		ecsact_id_cast<ecsact_system_like_id>(child)
+	);
+
+	if(iter != pkg_def.top_level_systems.end()) {
+		pkg_def.top_level_systems.erase(iter);
+	}
 
 	if(!child_def.name.empty()) {
 		auto child_decl_id = ecsact_id_cast<ecsact_decl_id>(child);
