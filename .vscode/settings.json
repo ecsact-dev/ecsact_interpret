@@ -1,5 +1,4 @@
 {
-	"editor.formatOnSave": true,
 	"search.exclude": {
 		"external": true,
 		"bazel-*": true,
