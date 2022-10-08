@@ -209,3 +209,17 @@ TEST(EcsactParseRuntimeInterop, FieldOffset) {
 	ASSERT_EQ(field_offsets.at("num"), offsetof(TestComponent, num));
 	ASSERT_EQ(field_offsets.at("test_entity"), offsetof(TestComponent, test_entity));
 }
+
+TEST(EcsactParseRuntimeInterop, Enums) {
+	auto package_id = (ecsact_package_id)-1;
+	ecsact_meta_get_package_ids(1, &package_id, nullptr);
+
+	auto enum_count = ecsact_meta_count_enums(package_id);
+	ASSERT_EQ(enum_count, 1);
+
+	ecsact_enum_id enum_id = {};
+	ecsact_meta_get_enum_ids(package_id, 1, &enum_id, nullptr);
+
+	auto enum_value_count = ecsact_meta_count_enum_values(enum_id);
+	ASSERT_EQ(enum_value_count, 2);
+}

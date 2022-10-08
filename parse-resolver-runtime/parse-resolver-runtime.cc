@@ -370,6 +370,7 @@ ecsact_enum_id ecsact_create_enum
 	auto enum_id = next_id<ecsact_enum_id>();
 	auto& def = enum_defs[enum_id];
 	def.name = std::string_view(enum_name, enum_name_len);
+	pkg_def.enums.push_back(enum_id);
 
 	return enum_id;
 }
