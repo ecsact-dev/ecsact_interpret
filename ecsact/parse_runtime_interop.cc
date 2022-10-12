@@ -12,7 +12,7 @@
 #include "magic_enum.hpp"
 #include "ecsact/parse.h"
 #include "ecsact/runtime/dynamic.h"
-#include "ecsact/runtime/meta.h"
+#include "ecsact/runtime/meta.hh"
 
 #include "detail/visit_statement.hh"
 
@@ -46,9 +46,9 @@ std::optional<ecsact_enum_id> find_enum_by_name
 	, std::string_view   target_enum_name
 	)
 {
-	std::vector<ecsact_enum_id> enum_ids;
-	enum_ids.resize(ecsact_meta_count_enums(package_id));
-	for(auto& enum_id : enum_ids) {
+	using ecsact::meta::get_enum_ids;
+
+	for(auto& enum_id : get_enum_ids(package_id)) {
 		std::string enum_name = ecsact_meta_enum_name(enum_id);
 		if(enum_name == target_enum_name) {
 			return enum_id;
