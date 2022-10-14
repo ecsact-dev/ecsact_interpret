@@ -61,5 +61,9 @@ namespace ecsact::detail {
 			swap(_size, other._size);
 			swap(_data, other._data);
 		}
+
+		constexpr void clear() {
+			_size = 0;
+		}
 	};
 }

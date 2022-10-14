@@ -4,11 +4,18 @@ load("//bazel:copts.bzl", "copts")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "ecsact_interpret_detail",
+    visibility = ["//:__subpackages__"],
+    hdrs = glob(["ecsact/interpret/detail/*.hh"]),
+)
+
+cc_library(
     name = "ecsact_interpret",
-    srcs = glob(["ecsact/interpret/**/*.h", "ecsact/interpret/**/*.cc", "ecsact/interpret/**/*.hh"]),
-    hdrs = glob(["ecsact/interpret/*.h"]),
+    srcs = glob(["ecsact/interpret/**/*.cc"]),
+    hdrs = glob(["ecsact/interpret/*.h", "ecsact/interpret/*.hh"]),
     copts = copts,
     deps = [
+        ":ecsact_interpret_detail",
         "//parse-resolver-runtime",
         "@ecsact_parse",
     ],

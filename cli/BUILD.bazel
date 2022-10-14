@@ -9,6 +9,8 @@ cc_binary(
     srcs = ["ecsact_interpreter_cli.cc"],
     deps = [
         "//:ecsact_interpret",
+        "//:ecsact_interpret_detail",
+        "@magic_enum",
     ],
 )
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cctype>
+
 namespace ecsact::detail {
 	int count_char(const auto& string_like, char c, int& out_last_index) {
 		auto len = string_like.size();
@@ -12,5 +14,15 @@ namespace ecsact::detail {
 			}
 		}
 		return count;
+	}
+
+	bool is_empty_or_whitespace(const auto& string_like) {
+		for(auto c : string_like) {
+			if(!std::isspace(c)) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 }
