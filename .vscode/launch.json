@@ -11,7 +11,10 @@
 				"type": "cppvsdbg",
 				"program": "${workspaceRoot}/bazel-bin/test/test.exe"
 			},
-			"preLaunchTask": "build //test:test"
+			"preLaunchTask": "build //test:test",
+			"sourceMap": {
+				"E:/.cache/bazel/output_base/execroot/ecsact_parse_runtime_interop": "${workspaceFolder}"
+			}
 		}
 	]
 }

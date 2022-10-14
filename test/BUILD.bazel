@@ -7,7 +7,7 @@ cc_test(
     copts = copts,
     data = ["test.ecsact"],
     deps = [
-        "//:ecsact_parse_runtime_interop",
+        "//:ecsact_interpret",
         "@bazel_sundry//bazel_sundry:runfiles",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",

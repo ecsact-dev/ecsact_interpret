@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <unordered_map>
 #include <functional>
-#include "ecsact/parse_runtime_interop.h"
+#include "ecsact/interpret/eval.h"
 #include "ecsact/runtime/meta.h"
 #include "ecsact/runtime/meta.hh"
 #include "bazel_sundry/runfiles.hh"
@@ -50,7 +50,7 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 	ASSERT_TRUE(runfiles);
 
 	auto test_ecsact = runfiles->Rlocation(
-		"ecsact_parse_runtime_interop/test/test.ecsact"
+		"ecsact_interop/test/test.ecsact"
 	);
 	ASSERT_FALSE(test_ecsact.empty());
 	ASSERT_TRUE(fs::exists(test_ecsact));

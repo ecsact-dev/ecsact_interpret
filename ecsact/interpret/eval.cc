@@ -1,4 +1,4 @@
-#include "ecsact/parse_runtime_interop.h"
+#include "ecsact/interpret/eval.h"
 
 #include <concepts>
 #include <unordered_map>
@@ -426,6 +426,102 @@ static void destroy_all_packages() {
 	}
 }
 
+static void on_parse_success
+	( ecsact_parse_callback_params         params
+	, const char**                         file_paths
+	, std::vector<parse_interop_package>&  interop_packages
+	)
+{
+	auto& pkg = interop_packages.at(params.source_file_index);
+
+	switch(params.statement->type) {
+		case ECSACT_STATEMENT_NONE:
+		case ECSACT_STATEMENT_UNKNOWN:
+			break;
+		case ECSACT_STATEMENT_PACKAGE:
+			pkg.source_file_path = file_paths[params.source_file_index];
+			pkg.package_interop(*params.statement);
+			break;
+		case ECSACT_STATEMENT_IMPORT:
+			pkg.import_interop(*params.statement);
+			break;
+		case ECSACT_STATEMENT_COMPONENT:
+			pkg.component_interop(*params.statement);
+			break;
+		case ECSACT_STATEMENT_TRANSIENT:
+			pkg.transient_interop(*params.statement);
+			break;
+		case ECSACT_STATEMENT_BUILTIN_TYPE_FIELD:
+			pkg.field_interop(*params.context_statement, *params.statement);
+			break;
+		case ECSACT_STATEMENT_USER_TYPE_FIELD:
+			pkg.user_type_field_interop(
+				*params.context_statement,
+				*params.statement
+			);
+			break;
+		case ECSACT_STATEMENT_SYSTEM:
+			if(params.context_statement) {
+				pkg.nested_system_interop(
+					*params.context_statement,
+					*params.statement
+				);
+			} else {
+				pkg.system_interop(*params.statement);
+			}
+			break;
+		case ECSACT_STATEMENT_SYSTEM_COMPONENT:
+			pkg.system_component_interop(
+				*params.context_statement,
+				*params.statement
+			);
+			break;
+		case ECSACT_STATEMENT_SYSTEM_WITH_ENTITY:
+			pkg.with_interop(
+				*params.context_statement,
+				*params.statement
+			);
+			break;
+		case ECSACT_STATEMENT_ACTION:
+			pkg.action_interop(*params.statement);
+			break;
+
+		case ECSACT_STATEMENT_ENUM:
+			pkg.enum_interop(*params.statement);
+			break;
+		case ECSACT_STATEMENT_ENUM_VALUE:
+			pkg.enum_value_interop(
+				*params.context_statement,
+				*params.statement
+			);
+			break;
+		case ECSACT_STATEMENT_SYSTEM_GENERATES:
+			pkg.generates_interop(
+				*params.context_statement,
+				*params.statement
+			);
+			break;
+		case ECSACT_STATEMENT_ENTITY_CONSTRAINT:
+			pkg.entity_constraint_interop(
+				*params.context_statement,
+				*params.statement
+			);
+			break;
+		default:
+			throw std::runtime_error(
+				"Unhandled statement type "s +
+				std::string(magic_enum::enum_name(params.statement->type))
+			);
+	}
+}
+
+static void on_parse_error
+	( ecsact_parse_callback_params params
+	)
+{
+
+}
+
 void ecsact_parse_runtime_interop
 	( const char**  file_paths
 	, int           file_paths_count
@@ -440,89 +536,13 @@ void ecsact_parse_runtime_interop
 		file_paths,
 		file_paths_count,
 		[&](ecsact_parse_callback_params params) {
-			auto& pkg = interop_packages.at(params.source_file_index);
-
-			switch(params.statement->type) {
-				case ECSACT_STATEMENT_NONE:
-				case ECSACT_STATEMENT_UNKNOWN:
-					break;
-				case ECSACT_STATEMENT_PACKAGE:
-					pkg.source_file_path = file_paths[params.source_file_index];
-					pkg.package_interop(*params.statement);
-					break;
-				case ECSACT_STATEMENT_IMPORT:
-					pkg.import_interop(*params.statement);
-					break;
-				case ECSACT_STATEMENT_COMPONENT:
-					pkg.component_interop(*params.statement);
-					break;
-				case ECSACT_STATEMENT_TRANSIENT:
-					pkg.transient_interop(*params.statement);
-					break;
-				case ECSACT_STATEMENT_BUILTIN_TYPE_FIELD:
-					pkg.field_interop(*params.context_statement, *params.statement);
-					break;
-				case ECSACT_STATEMENT_USER_TYPE_FIELD:
-					pkg.user_type_field_interop(
-						*params.context_statement,
-						*params.statement
-					);
-					break;
-				case ECSACT_STATEMENT_SYSTEM:
-					if(params.context_statement) {
-						pkg.nested_system_interop(
-							*params.context_statement,
-							*params.statement
-						);
-					} else {
-						pkg.system_interop(*params.statement);
-					}
-					break;
-				case ECSACT_STATEMENT_SYSTEM_COMPONENT:
-					pkg.system_component_interop(
-						*params.context_statement,
-						*params.statement
-					);
-					break;
-				case ECSACT_STATEMENT_SYSTEM_WITH_ENTITY:
-					pkg.with_interop(
-						*params.context_statement,
-						*params.statement
-					);
-					break;
-				case ECSACT_STATEMENT_ACTION:
-					pkg.action_interop(*params.statement);
-					break;
-
-				case ECSACT_STATEMENT_ENUM:
-					pkg.enum_interop(*params.statement);
-					break;
-				case ECSACT_STATEMENT_ENUM_VALUE:
-					pkg.enum_value_interop(
-						*params.context_statement,
-						*params.statement
-					);
-					break;
-				case ECSACT_STATEMENT_SYSTEM_GENERATES:
-					pkg.generates_interop(
-						*params.context_statement,
-						*params.statement
-					);
-					break;
-				case ECSACT_STATEMENT_ENTITY_CONSTRAINT:
-					pkg.entity_constraint_interop(
-						*params.context_statement,
-						*params.statement
-					);
-					break;
-				default:
-					throw std::runtime_error(
-						"Unhandled statement type "s +
-						std::string(magic_enum::enum_name(params.statement->type))
-					);
+			if(params.error) {
+				on_parse_error(params);
+				return ECSACT_PARSE_CALLBACK_STOP;
+			} else {
+				on_parse_success(params, file_paths, interop_packages);
+				return ECSACT_PARSE_CALLBACK_CONTINUE;
 			}
-
-			return ECSACT_PARSE_CALLBACK_CONTINUE;
 		}
 	);
 }
