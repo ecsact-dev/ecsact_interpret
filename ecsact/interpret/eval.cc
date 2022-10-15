@@ -848,16 +848,17 @@ static ecsact_eval_error eval_system_statement
 	, const ecsact_statement& statement
 	)
 {
+	std::optional<ecsact_system_like_id> parent_sys_like_id{};
 	if(context != nullptr) {
-		switch(context->type) {
-			case ECSACT_STATEMENT_ACTION:
-			case ECSACT_STATEMENT_SYSTEM:
-				break;
-			default:
-				return ecsact_eval_error{
-					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
-					.relevant_content = {},
-				};
+		parent_sys_like_id = find_by_statement<ecsact_system_like_id>(
+			package_id,
+			*context
+		);
+		if(!parent_sys_like_id) {
+			return ecsact_eval_error{
+				.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+				.relevant_content = {},
+			};
 		}
 	}
 
@@ -875,11 +876,15 @@ static ecsact_eval_error eval_system_statement
 		};	
 	}
 
-	ecsact_create_system(
+	auto sys_id = ecsact_create_system(
 		package_id,
 		data.system_name.data,
 		data.system_name.length
 	);
+
+	if(parent_sys_like_id) {
+		ecsact_add_child_system(*parent_sys_like_id, sys_id);
+	}
 
 	return {};
 }
