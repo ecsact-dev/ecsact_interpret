@@ -1269,7 +1269,79 @@ static ecsact_eval_error eval_system_with_entity_statement
 	, const ecsact_statement&             statement
 	)
 {
-	throw std::exception("Unimplemented eval_system_with_entity_statement");
+	if(context_stack.size() < 2) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
+	auto& sys_comp_statement = context_stack.back();
+	if(sys_comp_statement.type != ECSACT_STATEMENT_SYSTEM_COMPONENT) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
+	auto& sys_like_statement = context_stack[context_stack.size() - 2];
+	auto sys_like_id = find_by_statement<ecsact_system_like_id>(
+		package_id,
+		sys_like_statement
+	);
+
+	if(!sys_like_id) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
+	auto comp_name = std::string(
+		sys_comp_statement.data.system_component_statement.component_name.data,
+		sys_comp_statement.data.system_component_statement.component_name.length
+	);
+
+	auto comp_like_id = find_by_name<ecsact_component_like_id>(
+		package_id,
+		comp_name
+	);
+
+	if(!comp_like_id) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_UNKNOWN_COMPONENT_LIKE_TYPE,
+			.relevant_content =
+				sys_comp_statement.data.system_component_statement.component_name,
+		};
+	}
+
+	auto& data = statement.data.system_with_entity_statement;
+
+	std::string entity_field_name(
+		data.with_entity_field_name.data,
+		data.with_entity_field_name.length
+	);
+
+	std::optional<ecsact_field_id> entity_field_id{};
+	for(auto field_id : ecsact::meta::get_field_ids(*comp_like_id)) {
+		std::string field_name = ecsact_meta_field_name(
+			ecsact_id_cast<ecsact_composite_id>(*comp_like_id),
+			field_id
+		);
+		if(entity_field_name == field_name) {
+			entity_field_id = field_id;
+			break;
+		}
+	}
+
+	if(!entity_field_id) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_FIELD_NAME_ALREADY_EXISTS,
+			.relevant_content = data.with_entity_field_name,
+		};
+	}
+
+	return {};
 }
 
 static ecsact_eval_error eval_entity_constraint_statement
