@@ -27,9 +27,19 @@ typedef enum ecsact_eval_error_code {
 	/// Cannot find component or transient with name given.
 	ECSACT_EVAL_ERR_UNKNOWN_COMPONENT_LIKE_TYPE,
 
+	/// Cannot find component with name given.
+	ECSACT_EVAL_ERR_UNKNOWN_COMPONENT_TYPE,
+
+	/// Only 1 generates block is allowed per system-like.
+	ECSACT_EVAL_ERR_ONLY_ONE_GENERATES_BLOCK_ALLOWED,
+
 	/// Found multiple capabilities for the same component-like. Only one
 	/// capability entry is allowed per component-like per system-like.
 	ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
+
+	/// Found multiple generates component constraints for the same component in
+	/// the same generates block.
+	ECSACT_EVAL_ERR_GENERATES_DUPLICATE_COMPONENT_CONSTRAINTS,
 
 	/// An import statement was found after a declaration was already made.
 	ECSACT_EVAL_ERR_LATE_IMPORT,
@@ -51,14 +61,16 @@ ecsact_package_id ecsact_eval_package_statement
  * Invokes the appropriate ecsact runtime dynamic module methods for the given
  * statement typically from an `ecsact_parse` call.
  * @param package_id the package the statement should be evaluated in
- * @param context_statement the contextual statement for the `statement` param
- * @param statement the statment being evaluated
+ * @param statement_stack_size size of `statement_stack` parameter
+ * @param statement_stack sequential list of size `statement_stack`. The list is
+ *        treated like a stack where the last element is the 'top' element. The
+ *        'top' element is the statement that is evaluated.
  * @returns error details
  */
 ecsact_eval_error ecsact_eval_statement
 	( ecsact_package_id        package_id
-	, const ecsact_statement*  context_statement
-	, const ecsact_statement*  statement
+	, int32_t                  statement_stack_size
+	, const ecsact_statement*  statement_stack
 	);
 
 /**

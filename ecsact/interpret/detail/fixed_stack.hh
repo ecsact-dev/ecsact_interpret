@@ -15,6 +15,14 @@ namespace ecsact::detail {
 		using reference = T&;
 		using const_reference = const T&;
 
+		[[nodiscard]] constexpr T* data() noexcept {
+			return _data.data();
+		}
+
+		[[nodiscard]] constexpr T* data() const noexcept {
+			return _data.data();
+		}
+
 		[[nodiscard]] constexpr reference top() {
 			assert(_size > 0);
 			return _data[_size - 1];

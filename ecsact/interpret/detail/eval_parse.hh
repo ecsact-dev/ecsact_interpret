@@ -13,15 +13,11 @@ namespace ecsact::detail {
 
 constexpr std::array statement_ending_chars{';', '{', '}', '\n'};
 
-struct statement_and_source {
-	ecsact_statement statement;
-	std::string source;
-};
-
 template<typename InputStream>
 struct statement_reader {
 	InputStream stream;
-	fixed_stack<statement_and_source, 16> stack;
+	fixed_stack<ecsact_statement, 16> statements;
+	fixed_stack<std::string, 16> sources;
 	std::vector<std::string> next_statement_sources;
 	ecsact_statement* current_context = nullptr;
 	ecsact_parse_status status = {};
@@ -34,7 +30,8 @@ struct statement_reader {
 		status = {};
 		current_context = nullptr;
 		next_statement_sources.clear();
-		stack.clear();
+		statements.clear();
+		sources.clear();
 	}
 
 	bool can_read_next() {
@@ -42,91 +39,99 @@ struct statement_reader {
 	}
 
 	void read_next() {
-		auto previous = try_top(stack);
-		auto& next = stack.emplace();
+		auto previous_statement = try_top(statements);
+		auto& next_statement = statements.emplace();
+		auto& next_source = sources.emplace();
 
 		if(status.code == ECSACT_PARSE_STATUS_EXPECTED_STATEMENT_END) {
-			next.source.reserve(1024);
+			next_source.reserve(1024);
 			ecsact::detail::stream_get_until(
 				stream,
-				next.source,
+				next_source,
 				statement_ending_chars
 			);
 			if(!next_statement_sources.empty()) {
-				next.source = next_statement_sources.back() + next.source;
+				next_source = next_statement_sources.back() + next_source;
 				next_statement_sources.pop_back();
 			}
-			next.source.shrink_to_fit();
+			next_source.shrink_to_fit();
 		} else if(next_statement_sources.empty()) {
-			next.source.reserve(1024);
+			next_source.reserve(1024);
 			ecsact::detail::stream_get_until(
 				stream,
-				next.source,
+				next_source,
 				statement_ending_chars
 			);
-			next.source.shrink_to_fit();
+			next_source.shrink_to_fit();
 		} else {
-			next.source = next_statement_sources.back();
+			next_source = next_statement_sources.back();
 			next_statement_sources.pop_back();
 		}
 
-		auto read_data = next.source.data();
-		auto read_size = next.source.size();
+		auto read_data = next_source.data();
+		auto read_size = next_source.size();
 
-		current_context = previous ? &previous->get().statement : nullptr;
+		current_context = previous_statement
+			? &previous_statement->get()
+			: nullptr;
 		[[maybe_unused]]
 		auto parse_read_amount = ecsact_parse_statement(
 			read_data,
 			read_size,
 			current_context,
-			&next.statement,
+			&next_statement,
 			&status
 		);
 
 		int last_nl_index = -1;
-		current_line += count_char(next.source, '\n', last_nl_index);
+		current_line += count_char(next_source, '\n', last_nl_index);
 		if(last_nl_index != -1) {
-			current_character = next.source.size() - last_nl_index;
+			current_character = next_source.size() - last_nl_index;
 		} else {
-			current_character = next.source.size();
+			current_character = next_source.size();
 		}
 
 		if(!ecsact_is_error_parse_status_code(status.code)) {
-			assert(parse_read_amount == next.source.size());
+			assert(parse_read_amount == next_source.size());
 		}
 	}
 
 	void pump_status_code() {
 		if(status.code == ECSACT_PARSE_STATUS_OK) {
 			// We've reached the end of the current statement. Pop it off the stack.
-			stack.pop();
+			statements.pop();
+			sources.pop();
 			current_context = nullptr;
 		} else if(status.code == ECSACT_PARSE_STATUS_BLOCK_END) {
 			// We've reached the end of the current statement and the current block.
 			// Pop the current and pop the block.
-			stack.pop();
-			stack.pop();
+			statements.pop();
+			sources.pop();
+			statements.pop();
+			sources.pop();
 			current_context = nullptr;
 		}
 	}
 
 	void pop_rewind() {
-		auto& last = stack.top();
-		next_statement_sources.push_back(last.source);
-		stack.pop();
+		auto& last_source = sources.top();
+		next_statement_sources.push_back(last_source);
+		statements.pop();
+		sources.pop();
 		current_context = nullptr;
 	}
 
 	void pop_discard() {
-		stack.pop();
+		statements.pop();
+		sources.pop();
 		current_context = nullptr;
 	}
 
 	void eval() {
-		auto& last = stack.top();
+		auto& last_statement = statements.top();
 		auto eval_error = ecsact_eval_statement(
 			current_context,
-			&last.statement
+			&last_statement
 		);
 	}
 };
