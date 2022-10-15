@@ -104,11 +104,6 @@ int main() {
 				if(eval_err.code == ECSACT_EVAL_OK) {
 					reader.pump_status_code();
 				} else {
-					std::cerr
-						<< COLOR_RED "[ERROR] " COLOR_RESET
-						<< magic_enum::enum_name(eval_err.code)
-						<< COLOR_GREY " (" << eval_err.code << ")" COLOR_RESET
-						<< "\n";
 					std::string_view err_content(
 						eval_err.relevant_content.data,
 						eval_err.relevant_content.length
@@ -116,8 +111,10 @@ int main() {
 					int offset = eval_err.relevant_content.data - last.source.c_str();
 					if(offset < last.source.size()) {
 						std::cerr
-							<< last.source << "\n"
-							<< std::string(offset, ' ') << "^\n";
+							<< std::string(offset + 3, ' ') << COLOR_RED "^" COLOR_RESET
+							<< " " << magic_enum::enum_name(eval_err.code).substr(16)
+							<< COLOR_GREY " (" << eval_err.code << ")" COLOR_RESET
+							<< "\n";
 					} else {
 						std::cerr << err_content << "\n";
 					}
@@ -125,10 +122,21 @@ int main() {
 					reader.pop_discard();
 				}
 			} else {
-				reader.pop_discard();
+				std::string err_highlight;
+				err_highlight.reserve(last.source.size() + 3);
+				err_highlight += "   ";
+				for(auto c : last.source) {
+					if(std::isspace(c)) {
+						err_highlight.push_back(c);
+					} else {
+						err_highlight.push_back('^');
+					}
+				}
 				std::cerr
-					<< COLOR_RED "[ERROR] Must start with package statement" COLOR_RESET
+					<< COLOR_RED << err_highlight << COLOR_RESET " "
+					<< "Invalid first statement. Must start with package statement."
 					<< "\n\n";
+				reader.pop_discard();
 			}
 		}
 	}

@@ -14,6 +14,22 @@ typedef enum ecsact_eval_error_code {
 
 	/// A declaration with the name given already exists.
 	ECSACT_EVAL_ERR_DECLARATION_NAME_TAKEN,
+	
+	/// Statement cannot be evaluated in context provided.
+	ECSACT_EVAL_ERR_INVALID_CONTEXT,
+
+	/// Composite already has field with name provided.
+	ECSACT_EVAL_ERR_FIELD_NAME_ALREADY_EXISTS,
+
+	/// Field type could not be found by name given.
+	ECSACT_EVAL_ERR_UNKNOWN_FIELD_TYPE,
+
+	/// Cannot find component or transient with name given.
+	ECSACT_EVAL_ERR_UNKNOWN_COMPONENT_LIKE_TYPE,
+
+	/// Found multiple capabilities for the same component-like. Only one
+	/// capability entry is allowed per component-like per system-like.
+	ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
 
 	/// An import statement was found after a declaration was already made.
 	ECSACT_EVAL_ERR_LATE_IMPORT,

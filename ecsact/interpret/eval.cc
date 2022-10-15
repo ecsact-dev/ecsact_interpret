@@ -59,6 +59,7 @@ std::optional<ecsact_enum_id> find_enum_by_name
 std::optional<ecsact_field_type> find_user_field_type_by_name
 	( ecsact_package_id  package_id
 	, std::string_view   user_type_name
+	, int32_t            length
 	)
 {
 	auto enum_id = find_enum_by_name(package_id, user_type_name);
@@ -66,7 +67,20 @@ std::optional<ecsact_field_type> find_user_field_type_by_name
 		return ecsact_field_type{
 			.kind = ECSACT_TYPE_KIND_ENUM,
 			.type{.enum_id = *enum_id},
+			.length = length,
 		};
+	}
+
+	return {};
+}
+
+template<typename R, typename T>
+static std::optional<R> cast_optional_id
+	( std::optional<T> opt_id
+	)
+{
+	if(opt_id) {
+		return ecsact_id_cast<R>(*opt_id);
 	}
 
 	return {};
@@ -501,18 +515,259 @@ std::optional<ecsact_field_type> find_user_field_type_by_name
 
 // }
 
-static std::optional<ecsact_component_id> find_component_by_name
+template<typename T>
+std::optional<T> find_by_name
 	( ecsact_package_id   package_id
-	, const std::string&  component_name
+	, const std::string&  name
+	);
+
+template<typename T>
+std::optional<T> find_by_statement
+	( ecsact_package_id        package_id
+	, const ecsact_statement&  statement
+	);
+
+template<>
+std::optional<ecsact_component_id> find_by_name
+	( ecsact_package_id   package_id
+	, const std::string&  name
 	)
 {
-	for(auto comp_id : ecsact::meta::get_component_ids(package_id)) {
-		if(component_name == ecsact::meta::component_name(comp_id)) {
-			return comp_id;
+	for(auto id : ecsact::meta::get_component_ids(package_id)) {
+		if(name == ecsact::meta::component_name(id)) {
+			return id;
 		}
 	}
 
 	return {};
+}
+
+template<>
+std::optional<ecsact_transient_id> find_by_name
+	( ecsact_package_id   package_id
+	, const std::string&  name
+	)
+{
+	for(auto id : ecsact::meta::get_transient_ids(package_id)) {
+		if(name == ecsact::meta::transient_name(id)) {
+			return id;
+		}
+	}
+
+	return {};
+}
+
+template<>
+std::optional<ecsact_system_id> find_by_name
+	( ecsact_package_id   package_id
+	, const std::string&  name
+	)
+{
+	for(auto id : ecsact::meta::get_system_ids(package_id)) {
+		if(name == ecsact::meta::system_name(id)) {
+			return id;
+		}
+	}
+
+	return {};
+}
+
+template<>
+std::optional<ecsact_action_id> find_by_name
+	( ecsact_package_id   package_id
+	, const std::string&  name
+	)
+{
+	for(auto id : ecsact::meta::get_action_ids(package_id)) {
+		if(name == ecsact::meta::action_name(id)) {
+			return id;
+		}
+	}
+
+	return {};
+}
+
+template<>
+std::optional<ecsact_enum_id> find_by_name
+	( ecsact_package_id   package_id
+	, const std::string&  name
+	)
+{
+	for(auto id : ecsact::meta::get_enum_ids(package_id)) {
+		if(name == ecsact::meta::enum_name(id)) {
+			return id;
+		}
+	}
+
+	return {};
+}
+
+template<>
+std::optional<ecsact_composite_id> find_by_name
+	( ecsact_package_id   pkg_id
+	, const std::string&  name
+	)
+{
+	if(auto id = find_by_name<ecsact_component_id>(pkg_id, name)) {
+		return ecsact_id_cast<ecsact_composite_id>(*id);
+	}
+
+	if(auto id = find_by_name<ecsact_transient_id>(pkg_id, name)) {
+		return ecsact_id_cast<ecsact_composite_id>(*id);
+	}
+
+	if(auto id = find_by_name<ecsact_action_id>(pkg_id, name)) {
+		return ecsact_id_cast<ecsact_composite_id>(*id);
+	}
+
+	return {};
+}
+
+template<>
+std::optional<ecsact_decl_id> find_by_name
+	( ecsact_package_id   pkg_id
+	, const std::string&  name
+	)
+{
+	if(auto id = find_by_name<ecsact_component_id>(pkg_id, name)) {
+		return ecsact_id_cast<ecsact_decl_id>(*id);
+	}
+
+	if(auto id = find_by_name<ecsact_transient_id>(pkg_id, name)) {
+		return ecsact_id_cast<ecsact_decl_id>(*id);
+	}
+
+	if(auto id = find_by_name<ecsact_system_id>(pkg_id, name)) {
+		return ecsact_id_cast<ecsact_decl_id>(*id);
+	}
+
+	if(auto id = find_by_name<ecsact_action_id>(pkg_id, name)) {
+		return ecsact_id_cast<ecsact_decl_id>(*id);
+	}
+
+	return {};
+}
+
+template<>
+std::optional<ecsact_component_like_id> find_by_name
+	( ecsact_package_id   pkg_id
+	, const std::string&  name
+	)
+{
+	if(auto id = find_by_name<ecsact_component_id>(pkg_id, name)) {
+		return ecsact_id_cast<ecsact_component_like_id>(*id);
+	}
+
+	if(auto id = find_by_name<ecsact_transient_id>(pkg_id, name)) {
+		return ecsact_id_cast<ecsact_component_like_id>(*id);
+	}
+
+	return {};
+}
+
+template<>
+std::optional<ecsact_composite_id> find_by_statement
+	( ecsact_package_id        package_id
+	, const ecsact_statement&  statement
+	)
+{
+	switch(statement.type) {
+		case ECSACT_STATEMENT_COMPONENT:
+			return cast_optional_id<ecsact_composite_id>(
+				find_by_name<ecsact_component_id>(
+					package_id,
+					std::string(
+						statement.data.component_statement.component_name.data,
+						statement.data.component_statement.component_name.length
+					)
+				)
+			);
+		case ECSACT_STATEMENT_TRANSIENT:
+			return cast_optional_id<ecsact_composite_id>(
+				find_by_name<ecsact_transient_id>(
+					package_id,
+					std::string(
+						statement.data.transient_statement.transient_name.data,
+						statement.data.transient_statement.transient_name.length
+					)
+				)
+			);
+		case ECSACT_STATEMENT_ACTION:
+			return cast_optional_id<ecsact_composite_id>(
+				find_by_name<ecsact_action_id>(
+					package_id,
+					std::string(
+						statement.data.action_statement.action_name.data,
+						statement.data.action_statement.action_name.length
+					)
+				)
+			);
+		default:
+			break;
+	}
+
+	return {};
+}
+
+template<>
+std::optional<ecsact_system_like_id> find_by_statement
+	( ecsact_package_id        package_id
+	, const ecsact_statement&  statement
+	)
+{
+	switch(statement.type) {
+		case ECSACT_STATEMENT_SYSTEM:
+			return cast_optional_id<ecsact_system_like_id>(
+				find_by_name<ecsact_system_id>(
+					package_id,
+					std::string(
+						statement.data.system_statement.system_name.data,
+						statement.data.system_statement.system_name.length
+					)
+				)
+			);
+		case ECSACT_STATEMENT_ACTION:
+			return cast_optional_id<ecsact_system_like_id>(
+				find_by_name<ecsact_action_id>(
+					package_id,
+					std::string(
+						statement.data.action_statement.action_name.data,
+						statement.data.action_statement.action_name.length
+					)
+				)
+			);
+		default:
+			break;
+	}
+
+	return {};
+}
+
+static ecsact_eval_error eval_none_statement
+	( ecsact_package_id
+	, const ecsact_statement*
+	, const ecsact_statement&
+	)
+{
+	return {};
+}
+
+static ecsact_eval_error eval_unknown_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	throw std::exception("Unimplemented eval_unknown_statement");
+}
+
+static ecsact_eval_error eval_import_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	throw std::exception("Unimplemented eval_import_statement");
 }
 
 static ecsact_eval_error eval_component_statement
@@ -521,28 +776,452 @@ static ecsact_eval_error eval_component_statement
 	, const ecsact_statement&  statement
 	)
 {
+	if(context != nullptr) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
 	auto& data = statement.data.component_statement;
-	auto comp_name = std::string(
+	auto name = std::string(
 		data.component_name.data,
 		data.component_name.length
 	);
 
-	auto comp_id = find_component_by_name(package_id, comp_name);
-	if(!comp_id) {
-		comp_id = ecsact_create_component(
-			package_id,
-			data.component_name.data,
-			data.component_name.length
-		);
-	} else {
+	auto existing_decl = find_by_name<ecsact_decl_id>(package_id, name);
+	if(existing_decl) {
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_DECLARATION_NAME_TAKEN,
 			.relevant_content = data.component_name,
-		};
+		};	
 	}
+
+	ecsact_create_component(
+		package_id,
+		data.component_name.data,
+		data.component_name.length
+	);
 
 	return {};
 }
+
+static ecsact_eval_error eval_transient_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	if(context != nullptr) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
+	auto& data = statement.data.transient_statement;
+	auto name = std::string(
+		data.transient_name.data,
+		data.transient_name.length
+	);
+
+	auto existing_decl = find_by_name<ecsact_decl_id>(package_id, name);
+	if(existing_decl) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_DECLARATION_NAME_TAKEN,
+			.relevant_content = data.transient_name,
+		};	
+	}
+
+	ecsact_create_transient(
+		package_id,
+		data.transient_name.data,
+		data.transient_name.length
+	);
+
+	return {};
+}
+
+static ecsact_eval_error eval_system_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	if(context != nullptr) {
+		switch(context->type) {
+			case ECSACT_STATEMENT_ACTION:
+			case ECSACT_STATEMENT_SYSTEM:
+				break;
+			default:
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+					.relevant_content = {},
+				};
+		}
+	}
+
+	auto& data = statement.data.system_statement;
+	auto name = std::string(
+		data.system_name.data,
+		data.system_name.length
+	);
+
+	auto existing_decl = find_by_name<ecsact_decl_id>(package_id, name);
+	if(existing_decl) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_DECLARATION_NAME_TAKEN,
+			.relevant_content = data.system_name,
+		};	
+	}
+
+	ecsact_create_system(
+		package_id,
+		data.system_name.data,
+		data.system_name.length
+	);
+
+	return {};
+}
+
+static ecsact_eval_error eval_action_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	if(context != nullptr) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
+	auto& data = statement.data.action_statement;
+	auto name = std::string(
+		data.action_name.data,
+		data.action_name.length
+	);
+
+	auto existing_decl = find_by_name<ecsact_decl_id>(package_id, name);
+	if(existing_decl) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_DECLARATION_NAME_TAKEN,
+			.relevant_content = data.action_name,
+		};	
+	}
+
+	ecsact_create_action(
+		package_id,
+		data.action_name.data,
+		data.action_name.length
+	);
+
+	return {};
+}
+
+static ecsact_eval_error eval_enum_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	if(context != nullptr) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
+	auto& data = statement.data.enum_statement;
+	auto name = std::string(
+		data.enum_name.data,
+		data.enum_name.length
+	);
+
+	auto existing_decl = find_by_name<ecsact_decl_id>(package_id, name);
+	if(existing_decl) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_DECLARATION_NAME_TAKEN,
+			.relevant_content = data.enum_name,
+		};	
+	}
+
+	ecsact_create_enum(
+		package_id,
+		data.enum_name.data,
+		data.enum_name.length
+	);
+
+	return {};
+}
+
+static ecsact_eval_error eval_enum_value_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	auto& data = statement.data.enum_value_statement;
+
+	if(context == nullptr || context->type != ECSACT_STATEMENT_ENUM) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = data.name,
+		};
+	}
+
+	auto& context_data = context->data.enum_statement;
+	auto enum_name = std::string(
+		context_data.enum_name.data,
+		context_data.enum_name.length
+	);
+
+	auto enum_id = find_by_name<ecsact_enum_id>(package_id, enum_name);
+	if(!enum_id) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = context_data.enum_name,
+		};
+	}
+
+	ecsact_add_enum_value(
+		*enum_id,
+		data.value,
+		data.name.data,
+		data.name.length
+	);
+
+	return {};
+}
+
+static ecsact_eval_error eval_builtin_type_field_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	auto& data = statement.data.field_statement;
+
+	if(context == nullptr) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
+	auto compo_id = find_by_statement<ecsact_composite_id>(package_id, *context);
+	if(!compo_id) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
+	std::string field_name(data.field_name.data, data.field_name.length);
+
+	for(auto field_id : ecsact::meta::get_field_ids(*compo_id)) {
+		std::string other_field_name = ecsact_meta_field_name(*compo_id, field_id);
+		if(field_name == other_field_name) {
+			return ecsact_eval_error{
+				.code = ECSACT_EVAL_ERR_FIELD_NAME_ALREADY_EXISTS,
+				.relevant_content = data.field_name,
+			};
+		}
+	}
+
+	ecsact_add_field(
+		*compo_id,
+		ecsact_field_type{
+			.kind = ECSACT_TYPE_KIND_BUILTIN,
+			.type{.builtin = data.field_type},
+			.length = data.length,
+		},
+		data.field_name.data,
+		data.field_name.length
+	);
+
+	return {};
+}
+
+static ecsact_eval_error eval_user_type_field_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	auto& data = statement.data.user_type_field_statement;
+
+	if(context == nullptr) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
+	auto compo_id = find_by_statement<ecsact_composite_id>(package_id, *context);
+	if(!compo_id) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
+	std::string field_name(data.field_name.data, data.field_name.length);
+
+	for(auto field_id : ecsact::meta::get_field_ids(*compo_id)) {
+		std::string other_field_name = ecsact_meta_field_name(*compo_id, field_id);
+		if(field_name == other_field_name) {
+			return ecsact_eval_error{
+				.code = ECSACT_EVAL_ERR_FIELD_NAME_ALREADY_EXISTS,
+				.relevant_content = data.field_name,
+			};
+		}
+	}
+
+	auto user_type_name = std::string_view(
+		data.user_type_name.data,
+		data.user_type_name.length
+	);
+	auto user_field_type = find_user_field_type_by_name(
+		package_id,
+		user_type_name,
+		data.user_type_name.length
+	);
+	if(!user_field_type) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_UNKNOWN_FIELD_TYPE,
+			.relevant_content = data.user_type_name,
+		};
+	}
+
+	ecsact_add_field(
+		*compo_id,
+		*user_field_type,
+		data.field_name.data,
+		data.field_name.length
+	);
+
+	return {};
+}
+
+static ecsact_eval_error eval_entity_field_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	return eval_builtin_type_field_statement(package_id, context, statement);
+}
+
+static ecsact_eval_error eval_system_component_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	auto sys_like_id = find_by_statement<ecsact_system_like_id>(
+		package_id,
+		*context
+	);
+
+	if(!sys_like_id) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+
+	auto& data = statement.data.system_component_statement;
+
+	std::string comp_like_name(
+		data.component_name.data,
+		data.component_name.length
+	);
+
+	auto comp_like_id = find_by_name<ecsact_component_like_id>(
+		package_id,
+		comp_like_name
+	);
+
+	if(!comp_like_id) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_UNKNOWN_COMPONENT_LIKE_TYPE,
+			.relevant_content = data.component_name,
+		};
+	}
+	
+	for(auto& entry : ecsact::meta::system_capabilities(*sys_like_id)) {
+		if(entry.first == *comp_like_id) {
+			return ecsact_eval_error{
+				.code = ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
+				.relevant_content = data.component_name,
+			};
+		}
+	}
+
+	std::optional<ecsact_field_id> entity_field_id{};
+	if(data.with_entity_field_name.length > 0) {
+		std::string entity_field_name(
+			data.with_entity_field_name.data,
+			data.with_entity_field_name.length
+		);
+
+		for(auto field_id : ecsact::meta::get_field_ids(*comp_like_id)) {
+			std::string field_name = ecsact_meta_field_name(
+				ecsact_id_cast<ecsact_composite_id>(*comp_like_id),
+				field_id
+			);
+			if(entity_field_name == field_name) {
+				entity_field_id = field_id;
+				break;
+			}
+		}
+
+		if(!entity_field_id) {
+			return ecsact_eval_error{
+				.code = ECSACT_EVAL_ERR_FIELD_NAME_ALREADY_EXISTS,
+				.relevant_content = data.with_entity_field_name,
+			};
+		}
+	}
+
+	ecsact_set_system_capability(
+		*sys_like_id,
+		*comp_like_id,
+		data.capability
+	);
+
+	return {};
+}
+
+static ecsact_eval_error eval_system_generates_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	throw std::exception("Unimplemented eval_system_generates_statement");
+}
+
+static ecsact_eval_error eval_system_with_entity_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	throw std::exception("Unimplemented eval_system_with_entity_statement");
+}
+
+static ecsact_eval_error eval_entity_constraint_statement
+	( ecsact_package_id package_id
+	, const ecsact_statement* context
+	, const ecsact_statement& statement
+	)
+{
+	throw std::exception("Unimplemented eval_entity_constraint_statement");
+}
+
 
 ecsact_eval_error ecsact_eval_statement
 	( ecsact_package_id        package_id
@@ -553,8 +1232,103 @@ ecsact_eval_error ecsact_eval_statement
 	ecsact_eval_error err{};
 
 	switch(statement->type) {
+		case ECSACT_STATEMENT_NONE:
+			return eval_none_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_UNKNOWN:
+			return eval_unknown_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_PACKAGE:
+			return ecsact_eval_error{
+				.code = ECSACT_EVAL_ERR_UNEXPECTED_STATEMENT,
+				.relevant_content = {},
+			};
+		case ECSACT_STATEMENT_IMPORT:
+			return eval_import_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
 		case ECSACT_STATEMENT_COMPONENT:
 			return eval_component_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_TRANSIENT:
+			return eval_transient_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_SYSTEM:
+			return eval_system_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_ACTION:
+			return eval_action_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_ENUM:
+			return eval_enum_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_ENUM_VALUE:
+			return eval_enum_value_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_BUILTIN_TYPE_FIELD:
+			return eval_builtin_type_field_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_USER_TYPE_FIELD:
+			return eval_user_type_field_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_ENTITY_FIELD:
+			return eval_entity_field_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_SYSTEM_COMPONENT:
+			return eval_system_component_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_SYSTEM_GENERATES:
+			return eval_system_generates_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_SYSTEM_WITH_ENTITY:
+			return eval_system_with_entity_statement(
+				package_id,
+				context_statement,
+				*statement
+			);
+		case ECSACT_STATEMENT_ENTITY_CONSTRAINT:
+			return eval_entity_constraint_statement(
 				package_id,
 				context_statement,
 				*statement
