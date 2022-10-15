@@ -70,15 +70,30 @@ int main() {
 				reader.pop_rewind();
 			}
 		} else if(ecsact_is_error_parse_status_code(reader.status.code)) {
+			auto& last_source = reader.sources.top();
+			std::string err_highlight;
+			err_highlight.reserve(last_source.size() + 3);
+			err_highlight += "   ";
+			for(auto c : last_source) {
+				if(std::isspace(c)) {
+					err_highlight.push_back(c);
+				} else {
+					err_highlight.push_back('^');
+				}
+			}
+
+			std::cerr
+				<< COLOR_RED << err_highlight << COLOR_RESET " ";
+
 			switch(reader.status.code) {
 				case ECSACT_PARSE_STATUS_UNEXPECTED_EOF:
-					std::cerr << COLOR_RED "[ERROR] Unexpected EOF\n" COLOR_RESET;
+					std::cerr << "Unexpected EOF\n";
 					break;
 				case ECSACT_PARSE_STATUS_SYNTAX_ERROR:
-					std::cerr << COLOR_RED "[ERROR] Syntax error\n" COLOR_RESET;
+					std::cerr << "Syntax error\n";
 					break;
 				default:
-					std::cerr << COLOR_RED "[ERROR] Unhandled error case\n" COLOR_RESET;
+					std::cerr << "Unhandled error case\n";
 					break;
 			}
 
