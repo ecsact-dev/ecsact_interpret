@@ -2,6 +2,9 @@
 
 #include <filesystem>
 #include <array>
+#include <unordered_set>
+#include <cassert>
+#include "magic_enum.hpp"
 #include "ecsact/interpret/parse_eval_error.hh"
 
 #include "./fixed_stack.hh"
@@ -43,7 +46,7 @@ struct statement_reader {
 		auto& next_statement = statements.emplace();
 		auto& next_source = sources.emplace();
 
-		if(status.code == ECSACT_PARSE_STATUS_EXPECTED_STATEMENT_END) {
+		if(status.code == ECSACT_PARSE_STATUS_ASSUMED_STATEMENT_END) {
 			next_source.reserve(1024);
 			ecsact::detail::stream_get_until(
 				stream,
@@ -102,6 +105,13 @@ struct statement_reader {
 			statements.pop();
 			sources.pop();
 			current_context = nullptr;
+		} else if(status.code == ECSACT_PARSE_STATUS_ASSUMED_STATEMENT_END) {
+			// A valid statement was parsed without a statement end being reached. It
+			// is expected to not call `pump_status_code` if reading more is required,
+			// but this is a "successful" parse. Treated the same as status OK.
+			statements.pop();
+			sources.pop();
+			current_context = nullptr;
 		} else if(status.code == ECSACT_PARSE_STATUS_BLOCK_END) {
 			// We've reached the end of the current statement and the current block.
 			// Pop the current and pop the block.
@@ -133,8 +143,71 @@ struct eval_parse_state {
 	std::filesystem::path file_path;
 	statement_reader<InputStream> reader;
 	std::optional<ecsact_package_id> package_id;
+	bool main_package = false;
+	std::string package_name;
 	std::vector<std::string> imports;
 };
+
+template<typename InputStream>
+parse_eval_error to_parse_eval_error
+	( int32_t                               source_index
+	, const statement_reader<InputStream>&  reader
+	)
+{
+	std::string error_message;
+
+	switch(reader.status.code) {
+		case ECSACT_PARSE_STATUS_SYNTAX_ERROR:
+			error_message = "Failed to parse statement. Syntax error.";
+			break;
+		case ECSACT_PARSE_STATUS_UNEXPECTED_EOF:
+			error_message = "Failed to parse statement. Unexpected EOF.";
+			break;
+		default:
+			error_message = "Unknown parse error.";
+			break;
+	}
+
+	return parse_eval_error{
+		.source_index = source_index,
+		.line = reader.current_line,
+		.character = reader.current_character,
+		.error_message = error_message,
+	};
+}
+
+template<typename InputStream>
+parse_eval_error to_parse_eval_error
+	( int32_t                               source_index
+	, const statement_reader<InputStream>&  reader
+	, ecsact_eval_error                     eval_err
+	)
+{
+	std::string relevant_content(
+		eval_err.relevant_content.data,
+		eval_err.relevant_content.length
+	);
+	std::string err_code_str;
+	switch(eval_err.code) {
+		default:
+			err_code_str = magic_enum::enum_name(eval_err.code).substr(16);
+			break;
+	}
+
+	std::string error_message =
+		err_code_str + " (" +
+		std::to_string(magic_enum::enum_integer(eval_err.code)) + ")";
+	if(!relevant_content.empty()) {
+		error_message += " near: " + relevant_content;
+	}
+
+	return parse_eval_error{
+		.source_index = source_index,
+		.line = reader.current_line,
+		.character = reader.current_character,
+		.error_message = error_message,
+	};
+}
 
 template<typename InputStream>
 void parse_package_statements
@@ -145,13 +218,30 @@ void parse_package_statements
 	auto source_index = 0;
 	for(auto& state : file_states) {
 		state.reader.read_next();
+
+		auto& statement = state.reader.statements.top();
 		
-		out_errors.push_back(parse_eval_error{
-			.source_index = source_index,
-			.line = state.reader.current_line,
-			.character = state.reader.current_character,
-			.error_message = "",
-		});
+		if(ecsact_is_error_parse_status_code(state.reader.status.code)) {
+			out_errors.push_back(to_parse_eval_error(source_index, state.reader));
+		} else {
+			if(statement.type != ECSACT_STATEMENT_PACKAGE) {
+				out_errors.push_back(parse_eval_error{
+					.source_index = source_index,
+					.line = state.reader.current_line,
+					.character = state.reader.current_character,
+					.error_message =
+						"Must have package statement as firist statement in file.",
+				});
+			} else {
+				state.main_package = statement.data.package_statement.main;
+				state.package_name = std::string(
+					statement.data.package_statement.package_name.data,
+					statement.data.package_statement.package_name.length
+				);
+			}
+
+			state.reader.pump_status_code();
+		}
 
 		source_index += 1;
 	}
@@ -163,7 +253,31 @@ void parse_imports
 	, std::vector<parse_eval_error>&               out_errors
 	)
 {
+	auto source_index = 0;
+	for(auto& state : file_states) {
 
+		for(;;) {
+			state.reader.read_next();
+
+			if(ecsact_is_error_parse_status_code(state.reader.status.code)) {
+				out_errors.push_back(to_parse_eval_error(source_index, state.reader));
+			} else {
+				ecsact_statement& statement = state.reader.statements.top();
+				if(statement.type != ECSACT_STATEMENT_IMPORT) {
+					state.reader.pop_rewind();
+					break;
+				}
+				state.imports.push_back(std::string(
+					statement.data.import_statement.import_package_name.data,
+					statement.data.import_statement.import_package_name.length
+				));
+
+				state.reader.pump_status_code();
+			}
+		}
+
+		source_index += 1;
+	}
 }
 
 template<typename InputStream>
@@ -172,7 +286,33 @@ void check_unknown_imports
 	, std::vector<parse_eval_error>&               out_errors
 	)
 {
+	auto source_index = 0;
+	for(auto& state : file_states) {
+		for(auto& import_name : state.imports) {
+			bool found_import = false;
+			for(auto& other_state : file_states) {
+				if(state.package_name == other_state.package_name) {
+					continue;
+				}
 
+				if(import_name == other_state.package_name) {
+					found_import = true;
+					break;
+				}
+			}
+
+			if(!found_import) {
+				out_errors.push_back({
+					.source_index = source_index,
+					.line = state.reader.current_line,
+					.character = state.reader.current_character,
+					.error_message = "Unknown import package '" + import_name + "'",
+				});
+			}
+		}
+
+		source_index += 1;
+	}
 }
 
 template<typename InputStream>
@@ -190,25 +330,116 @@ void eval_package_statements
 	, std::vector<parse_eval_error>&               out_errors
 	)
 {
-
+	for(auto& state : file_states) {
+		ecsact_package_statement faux_statement{
+			.main = state.main_package,
+			.package_name{
+				.data = state.package_name.c_str(),
+				.length = static_cast<int32_t>(state.package_name.size()),
+			},
+		};
+		state.package_id = ecsact_eval_package_statement(&faux_statement);
+	}
 }
 
 template<typename InputStream>
 void eval_imports
-	( eval_parse_state<InputStream>&  file_states
+	( int32_t                         source_index
+	, eval_parse_state<InputStream>&  file_state
 	, std::vector<parse_eval_error>&  out_errors
 	)
 {
+	for(auto& import_name : file_state.imports) {
+		ecsact_statement faux_import_statement{
+			.type = ECSACT_STATEMENT_IMPORT,
+			.data{.import_statement{
+				.import_package_name{
+					.data = import_name.c_str(),
+					.length = static_cast<int32_t>(import_name.size()),
+				},
+			}},
+		};
 
+		auto eval_err = ecsact_eval_statement(
+			*file_state.package_id,
+			1,
+			&faux_import_statement
+		);
+
+		if(eval_err.code != ECSACT_EVAL_OK) {
+			out_errors.push_back(to_parse_eval_error(
+				source_index,
+				file_state.reader,
+				eval_err
+			));
+		}
+	}
+}
+
+template<typename InputStream>
+void skip_until_current_block_end
+	( statement_reader<InputStream>& reader
+	)
+{
+	assert(reader.status.code == ECSACT_PARSE_STATUS_BLOCK_BEGIN);
+	int block_depth = 1;
+	while(block_depth > 0) {
+		if(!reader.can_read_next()) {
+			break;
+		}
+
+		reader.read_next();
+		if(reader.status.code == ECSACT_PARSE_STATUS_BLOCK_BEGIN) {
+			block_depth += 1;
+		} else if(reader.status.code == ECSACT_PARSE_STATUS_BLOCK_END) {
+			block_depth -= 1;
+		}
+
+		reader.pump_status_code();
+	}
 }
 
 template<typename InputStream>
 void parse_eval_declarations
-	( eval_parse_state<InputStream>&  file_state
+	( int32_t                         source_index
+	, eval_parse_state<InputStream>&  file_state
 	, std::vector<parse_eval_error>&  out_errors
 	)
 {
+	while(file_state.reader.can_read_next()) {
+		file_state.reader.read_next();
 
+		if(ecsact_is_error_parse_status_code(file_state.reader.status.code)) {
+			out_errors.push_back(to_parse_eval_error(
+				source_index,
+				file_state.reader
+			));
+			continue;
+		}
+
+		auto& last_statement = file_state.reader.statements.top();
+		auto eval_err = ecsact_eval_statement(
+			*file_state.package_id,
+			static_cast<int32_t>(file_state.reader.statements.size()),
+			file_state.reader.statements.data()
+		);
+		
+		if(eval_err.code == ECSACT_EVAL_OK) {
+			file_state.reader.pump_status_code();
+		} else {
+			out_errors.push_back(to_parse_eval_error(
+				source_index,
+				file_state.reader,
+				eval_err
+			));
+
+			if(file_state.reader.status.code == ECSACT_PARSE_STATUS_BLOCK_BEGIN) {
+				skip_until_current_block_end(file_state.reader);
+			} else {
+				file_state.reader.pump_status_code();
+			}
+		}
+	}
 }
 
 template<typename InputStream>
@@ -216,7 +447,31 @@ std::vector<std::reference_wrapper<eval_parse_state<InputStream>>> get_sorted_st
 	( std::vector<eval_parse_state<InputStream>>&  file_states
 	)
 {
-	return {};
+	std::vector<std::reference_wrapper<eval_parse_state<InputStream>>> result;
+	result.reserve(file_states.size());
+
+	std::unordered_set<std::string> resolved_packages;
+	resolved_packages.reserve(file_states.size());
+
+	while(resolved_packages.size() != file_states.size()) {
+		for(auto& state : file_states) {
+			bool imports_resolved = true;
+			for(auto import_name : state.imports) {
+				if(!resolved_packages.contains(import_name)) {
+					imports_resolved = false;
+					break;
+				}
+			}
+
+			if(imports_resolved) {
+				resolved_packages.insert(state.package_name);
+				result.push_back(std::ref(state));
+			}
+		}
+	}
+
+	assert(result.capacity() == result.size());
+	return result;
 }
 
 }

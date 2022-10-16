@@ -54,132 +54,132 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 	ASSERT_FALSE(test_ecsact.empty());
 	ASSERT_TRUE(fs::exists(test_ecsact));
 
-	auto test_interop = [&] {
-		auto errors = ecsact::eval_files({test_ecsact});
-		ASSERT_TRUE(errors.empty());
+	auto errors = ecsact::eval_files({test_ecsact});
+	for(auto& err : errors) {
+		std::cerr
+			<< "[ERROR] test/test.ecsact:"
+			<< err.line << ":" << err.character << " "
+			<< err.error_message << "\n";
+	}
+	ASSERT_TRUE(errors.empty());
 
-		// Only 1 package
-		ASSERT_EQ(ecsact_meta_count_packages(), 1);
-		auto package_id = (ecsact_package_id)-1;
-		ecsact_meta_get_package_ids(1, &package_id, nullptr);
-		ASSERT_NE(package_id, (ecsact_package_id)-1);
+	// Only 1 package
+	ASSERT_EQ(ecsact_meta_count_packages(), 1);
+	auto package_id = (ecsact_package_id)-1;
+	ecsact_meta_get_package_ids(1, &package_id, nullptr);
+	ASSERT_NE(package_id, (ecsact_package_id)-1);
 
-		ASSERT_STREQ(ecsact_meta_package_name(package_id), "test");
+	ASSERT_STREQ(ecsact_meta_package_name(package_id), "test");
 
-		// Our test file only contains 1 component
-		ASSERT_EQ(ecsact_meta_count_components(package_id), 1);
+	// Our test file only contains 1 component
+	ASSERT_EQ(ecsact_meta_count_components(package_id), 1);
 
-		auto comp_id = ecsact_invalid_component_id;
-		ecsact_meta_get_component_ids(package_id, 1, &comp_id, nullptr);
-		ASSERT_NE(comp_id, ecsact_invalid_component_id);
-		auto compo_id = ecsact_id_cast<ecsact_composite_id>(comp_id);
+	auto comp_id = ecsact_invalid_component_id;
+	ecsact_meta_get_component_ids(package_id, 1, &comp_id, nullptr);
+	ASSERT_NE(comp_id, ecsact_invalid_component_id);
+	auto compo_id = ecsact_id_cast<ecsact_composite_id>(comp_id);
 
-		ASSERT_STREQ("TestComponent", ecsact_meta_component_name(comp_id));
-		for_each_field(
-			compo_id,
-			std::make_pair("num", [&](ecsact_field_id field_id) {
-				auto type = ecsact_meta_field_type(compo_id, field_id);
-				ASSERT_EQ(type.kind, ECSACT_TYPE_KIND_BUILTIN);
-				ASSERT_EQ(type.type.builtin, ECSACT_I32);
-				ASSERT_EQ(type.length, 1);
-			}),
-			std::make_pair("test_entity", [&](ecsact_field_id field_id) {
-				auto type = ecsact_meta_field_type(compo_id, field_id);
-				ASSERT_EQ(type.kind, ECSACT_TYPE_KIND_BUILTIN);
-				ASSERT_EQ(type.type.builtin, ECSACT_ENTITY_TYPE);
-				ASSERT_EQ(type.length, 1);
-			})
-		);
-		
-		// Here we're creating a function for each system in our test file to make
-		// sure we have the expected capabilities
-		using test_system_fns_t = std::unordered_map
-			< std::string
-			, std::function<void(ecsact_system_id)>
-			>;
-		test_system_fns_t test_system_fns{
-			{"TestSystem", [&](ecsact_system_id sys_id) {
-				auto sys_like_id = ecsact_id_cast<ecsact_system_like_id>(sys_id);
+	ASSERT_STREQ("TestComponent", ecsact_meta_component_name(comp_id));
+	for_each_field(
+		compo_id,
+		std::make_pair("num", [&](ecsact_field_id field_id) {
+			auto type = ecsact_meta_field_type(compo_id, field_id);
+			ASSERT_EQ(type.kind, ECSACT_TYPE_KIND_BUILTIN);
+			ASSERT_EQ(type.type.builtin, ECSACT_I32);
+			ASSERT_EQ(type.length, 1);
+		}),
+		std::make_pair("test_entity", [&](ecsact_field_id field_id) {
+			auto type = ecsact_meta_field_type(compo_id, field_id);
+			ASSERT_EQ(type.kind, ECSACT_TYPE_KIND_BUILTIN);
+			ASSERT_EQ(type.type.builtin, ECSACT_ENTITY_TYPE);
+			ASSERT_EQ(type.length, 1);
+		})
+	);
+	
+	// Here we're creating a function for each system in our test file to make
+	// sure we have the expected capabilities
+	using test_system_fns_t = std::unordered_map
+		< std::string
+		, std::function<void(ecsact_system_id)>
+		>;
+	test_system_fns_t test_system_fns{
+		{"TestSystem", [&](ecsact_system_id sys_id) {
+			auto sys_like_id = ecsact_id_cast<ecsact_system_like_id>(sys_id);
 
-				ASSERT_EQ(ecsact_meta_system_capabilities_count(sys_like_id), 1);
+			ASSERT_EQ(ecsact_meta_system_capabilities_count(sys_like_id), 1);
 
-				std::array sys_cap_comp_ids{(ecsact_component_like_id)-1};
-				std::array sys_caps{ecsact_system_capability{}};
-				ecsact_meta_system_capabilities(
-					sys_like_id,
-					1,
-					sys_cap_comp_ids.data(),
-					sys_caps.data(),
-					nullptr
-				);
+			std::array sys_cap_comp_ids{(ecsact_component_like_id)-1};
+			std::array sys_caps{ecsact_system_capability{}};
+			ecsact_meta_system_capabilities(
+				sys_like_id,
+				1,
+				sys_cap_comp_ids.data(),
+				sys_caps.data(),
+				nullptr
+			);
 
-				ASSERT_EQ(
-					sys_cap_comp_ids[0],
-					ecsact_id_cast<ecsact_component_like_id>(comp_id)
-				);
-				ASSERT_EQ(sys_caps[0], ECSACT_SYS_CAP_READWRITE);
+			ASSERT_EQ(
+				sys_cap_comp_ids[0],
+				ecsact_id_cast<ecsact_component_like_id>(comp_id)
+			);
+			ASSERT_EQ(sys_caps[0], ECSACT_SYS_CAP_READWRITE);
 
-				auto assoc_fields = ecsact::meta::system_association_fields(
-					sys_like_id,
-					ecsact_id_cast<ecsact_component_like_id>(comp_id)
-				);
-				ASSERT_EQ(assoc_fields.size(), 1);
-				auto field_id = *assoc_fields.begin();
-				auto assoc_field_name = ecsact_meta_field_name(
-					ecsact_id_cast<ecsact_composite_id>(comp_id),
-					field_id
-				);
-				ASSERT_STREQ(assoc_field_name, "test_entity");
-			}},
-			{"TestNestedSystem", [&](ecsact_system_id sys_id) {
-				auto sys_like_id = ecsact_id_cast<ecsact_system_like_id>(sys_id);
+			auto assoc_fields = ecsact::meta::system_association_fields(
+				sys_like_id,
+				ecsact_id_cast<ecsact_component_like_id>(comp_id)
+			);
+			ASSERT_EQ(assoc_fields.size(), 1);
+			auto field_id = *assoc_fields.begin();
+			auto assoc_field_name = ecsact_meta_field_name(
+				ecsact_id_cast<ecsact_composite_id>(comp_id),
+				field_id
+			);
+			ASSERT_STREQ(assoc_field_name, "test_entity");
+		}},
+		{"TestNestedSystem", [&](ecsact_system_id sys_id) {
+			auto sys_like_id = ecsact_id_cast<ecsact_system_like_id>(sys_id);
 
-				ASSERT_EQ(ecsact_meta_system_capabilities_count(sys_like_id), 1);
+			ASSERT_EQ(ecsact_meta_system_capabilities_count(sys_like_id), 1);
 
-				std::array sys_cap_comp_ids{(ecsact_component_like_id)-1};
-				std::array sys_caps{ecsact_system_capability{}};
-				ecsact_meta_system_capabilities(
-					sys_like_id,
-					1,
-					sys_cap_comp_ids.data(),
-					sys_caps.data(),
-					nullptr
-				);
+			std::array sys_cap_comp_ids{(ecsact_component_like_id)-1};
+			std::array sys_caps{ecsact_system_capability{}};
+			ecsact_meta_system_capabilities(
+				sys_like_id,
+				1,
+				sys_cap_comp_ids.data(),
+				sys_caps.data(),
+				nullptr
+			);
 
-				ASSERT_EQ(
-					sys_cap_comp_ids[0],
-					ecsact_id_cast<ecsact_component_like_id>(comp_id)
-				);
-				ASSERT_EQ(sys_caps[0], ECSACT_SYS_CAP_READWRITE);
-			}},
-		};
-
-		ASSERT_EQ(ecsact_meta_count_systems(package_id), test_system_fns.size());
-		std::vector<ecsact_system_id> sys_ids;
-		sys_ids.resize(test_system_fns.size());
-
-		int32_t out_count = 0;
-		ecsact_meta_get_system_ids(
-			package_id,
-			sys_ids.size(),
-			sys_ids.data(),
-			&out_count
-		);
-		ASSERT_EQ(sys_ids.size(), out_count);
-
-		for(auto sys_id : sys_ids) {
-			std::string sys_name = ecsact_meta_system_name(sys_id);
-			ASSERT_TRUE(test_system_fns.contains(sys_name))
-				<< "No test function for the '"
-				<< sys_name << "' system";
-			test_system_fns.at(sys_name)(sys_id);
-		}
+			ASSERT_EQ(
+				sys_cap_comp_ids[0],
+				ecsact_id_cast<ecsact_component_like_id>(comp_id)
+			);
+			ASSERT_EQ(sys_caps[0], ECSACT_SYS_CAP_READWRITE);
+		}},
 	};
 
-	test_interop();
-	// Running the interop a second time should be no different since all defs are
-	// removed.
-	test_interop();
+	ASSERT_EQ(ecsact_meta_count_systems(package_id), test_system_fns.size());
+	std::vector<ecsact_system_id> sys_ids;
+	sys_ids.resize(test_system_fns.size());
+
+	int32_t out_count = 0;
+	ecsact_meta_get_system_ids(
+		package_id,
+		sys_ids.size(),
+		sys_ids.data(),
+		&out_count
+	);
+	ASSERT_EQ(sys_ids.size(), out_count);
+
+	for(auto sys_id : sys_ids) {
+		std::string sys_name = ecsact_meta_system_name(sys_id);
+		ASSERT_TRUE(test_system_fns.contains(sys_name))
+			<< "No test function for the '"
+			<< sys_name << "' system";
+		test_system_fns.at(sys_name)(sys_id);
+	}
+
 }
 
 // Similar to the struct generated by the ecsact c++ code generator

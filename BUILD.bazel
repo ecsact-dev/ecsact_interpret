@@ -7,6 +7,7 @@ cc_library(
     name = "ecsact_interpret_detail",
     visibility = ["//:__subpackages__"],
     hdrs = glob(["ecsact/interpret/detail/*.hh"]),
+    deps = ["@magic_enum"],
 )
 
 cc_library(

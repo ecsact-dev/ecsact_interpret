@@ -1221,9 +1221,12 @@ int32_t ecsact_meta_system_association_capabilities_count
 {
 	auto& def = get_system_like(system_id);
 	auto& caps = def.caps.at(component_id);
-	auto& assoc_field = caps.assoc.at(field_id);
+	if(caps.assoc.contains(field_id)) {
+		auto& assoc_field = caps.assoc.at(field_id);
+		return static_cast<int32_t>(assoc_field.size());
+	}
 
-	return static_cast<int32_t>(assoc_field.size());
+	return 0;
 }
 
 void ecsact_meta_system_association_capabilities
@@ -1238,19 +1241,26 @@ void ecsact_meta_system_association_capabilities
 {
 	auto& def = get_system_like(system_id);
 	auto& caps = def.caps.at(component_id);
-	auto& assoc_field = caps.assoc.at(field_id);
-	
-	auto itr = assoc_field.begin();
-	for(int i=0; max_capabilities_count > i; ++i, ++itr) {
-		if(itr == assoc_field.end()) {
-			break;
+
+	if(caps.assoc.contains(field_id)) {
+		auto& assoc_field = caps.assoc.at(field_id);
+		
+		auto itr = assoc_field.begin();
+		for(int i=0; max_capabilities_count > i; ++i, ++itr) {
+			if(itr == assoc_field.end()) {
+				break;
+			}
+
+			out_capability_component_ids[i] = itr->first;
+			out_capabilities[i] = itr->second;
 		}
 
-		out_capability_component_ids[i] = itr->first;
-		out_capabilities[i] = itr->second;
-	}
-
-	if(out_capabilities_count != nullptr) {
-		*out_capabilities_count = static_cast<int32_t>(assoc_field.size());
+		if(out_capabilities_count != nullptr) {
+			*out_capabilities_count = static_cast<int32_t>(assoc_field.size());
+		}
+	} else {
+		if(out_capabilities_count != nullptr) {
+			*out_capabilities_count = 0;
+		}
 	}
 }

@@ -61,13 +61,16 @@ std::vector<parse_eval_error> ecsact::eval_files
 	if(!errors.empty()) return errors;
 
 	auto sorted_file_states = get_sorted_states(file_states);
+	auto source_index = 0;
 	for(auto& file_state_ref : sorted_file_states) {
 		auto& file_state = file_state_ref.get();
-		eval_imports(file_state, errors);
+		eval_imports(source_index, file_state, errors);
 		if(!errors.empty()) return errors;
 
-		parse_eval_declarations(file_state, errors);
+		parse_eval_declarations(source_index, file_state, errors);
 		if(!errors.empty()) return errors;
+
+		source_index += 1;
 	}
 
 	return errors;

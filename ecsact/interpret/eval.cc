@@ -282,6 +282,40 @@ std::optional<ecsact_composite_id> find_by_statement
 }
 
 template<>
+std::optional<ecsact_component_like_id> find_by_statement
+	( ecsact_package_id        package_id
+	, const ecsact_statement&  statement
+	)
+{
+	switch(statement.type) {
+		case ECSACT_STATEMENT_COMPONENT:
+			return cast_optional_id<ecsact_component_like_id>(
+				find_by_name<ecsact_component_id>(
+					package_id,
+					std::string(
+						statement.data.component_statement.component_name.data,
+						statement.data.component_statement.component_name.length
+					)
+				)
+			);
+		case ECSACT_STATEMENT_TRANSIENT:
+			return cast_optional_id<ecsact_component_like_id>(
+				find_by_name<ecsact_transient_id>(
+					package_id,
+					std::string(
+						statement.data.transient_statement.transient_name.data,
+						statement.data.transient_statement.transient_name.length
+					)
+				)
+			);
+		default:
+			break;
+	}
+
+	return {};
+}
+
+template<>
 std::optional<ecsact_system_like_id> find_by_statement
 	( ecsact_package_id        package_id
 	, const ecsact_statement&  statement
@@ -721,10 +755,77 @@ static ecsact_eval_error eval_system_component_statement
 		};
 	}
 
-	auto sys_like_id = find_by_statement<ecsact_system_like_id>(
-		package_id,
-		context_stack.back()
-	);
+	std::optional<ecsact_system_like_id> sys_like_id{};
+	std::optional<ecsact_component_like_id> assoc_comp{};
+	std::optional<ecsact_field_id> assoc_comp_field{};
+
+	auto& context = context_stack.back();
+	switch(context.type) {
+		case ECSACT_STATEMENT_SYSTEM:
+		case ECSACT_STATEMENT_ACTION:
+			sys_like_id = find_by_statement<ecsact_system_like_id>(
+				package_id,
+				context
+			);
+			break;
+		case ECSACT_STATEMENT_SYSTEM_COMPONENT: {
+			auto& data = context.data.system_component_statement;
+
+			if(context_stack.size() < 2) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+					.relevant_content = {},
+				};
+			}
+			sys_like_id = find_by_statement<ecsact_system_like_id>(
+				package_id,
+				context_stack[context_stack.size() - 2]
+			);
+
+			std::string comp_like_name(
+				data.component_name.data,
+				data.component_name.length
+			);
+
+			assoc_comp = find_by_name<ecsact_component_like_id>(
+				package_id,
+				comp_like_name
+			);
+			if(!assoc_comp) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+					.relevant_content = {},
+				};
+			}
+
+			if(data.with_entity_field_name.length == 0) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+					.relevant_content = data.component_name,
+				};
+			}
+			assoc_comp_field = find_field_by_name(
+				ecsact_id_cast<ecsact_composite_id>(*assoc_comp),
+				std::string_view(
+					data.with_entity_field_name.data,
+					data.with_entity_field_name.length
+				)
+			);
+
+			if(!assoc_comp_field) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+					.relevant_content = data.with_entity_field_name,
+				};
+			}
+			break;
+		}
+		default:
+			return ecsact_eval_error{
+				.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+				.relevant_content = {},
+			};
+	}
 
 	if(!sys_like_id) {
 		return ecsact_eval_error{
@@ -752,12 +853,28 @@ static ecsact_eval_error eval_system_component_statement
 		};
 	}
 	
-	for(auto& entry : ecsact::meta::system_capabilities(*sys_like_id)) {
-		if(entry.first == *comp_like_id) {
-			return ecsact_eval_error{
-				.code = ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
-				.relevant_content = data.component_name,
-			};
+	if(assoc_comp) {
+		auto assoc_caps = ecsact::meta::system_association_capabilities(
+			*sys_like_id,
+			*assoc_comp,
+			*assoc_comp_field
+		);
+		for(auto& entry : assoc_caps) {
+			if(entry.first == *comp_like_id) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
+					.relevant_content = data.component_name,
+				};
+			}
+		}
+	} else {
+		for(auto& entry : ecsact::meta::system_capabilities(*sys_like_id)) {
+			if(entry.first == *comp_like_id) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
+					.relevant_content = data.component_name,
+				};
+			}
 		}
 	}
 
@@ -787,11 +904,21 @@ static ecsact_eval_error eval_system_component_statement
 		}
 	}
 
-	ecsact_set_system_capability(
-		*sys_like_id,
-		*comp_like_id,
-		data.capability
-	);
+	if(assoc_comp) {
+		ecsact_set_system_association_capability(
+			*sys_like_id,
+			*assoc_comp,
+			*assoc_comp_field,
+			*comp_like_id,
+			data.capability
+		);
+	} else {
+		ecsact_set_system_capability(
+			*sys_like_id,
+			*comp_like_id,
+			data.capability
+		);
+	}
 
 	return {};
 }

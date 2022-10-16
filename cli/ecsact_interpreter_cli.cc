@@ -37,7 +37,7 @@ int main() {
 				reader.statements.empty() ||
 				reader.statements.top().type != ECSACT_STATEMENT_NONE;
 			const bool expected_end =
-				reader.status.code == ECSACT_PARSE_STATUS_EXPECTED_STATEMENT_END;
+				reader.status.code == ECSACT_PARSE_STATUS_ASSUMED_STATEMENT_END;
 
 			if(not_none_statement && expected_end) {
 				std::cout << COLOR_GREY ".. " COLOR_RESET;
@@ -67,7 +67,7 @@ int main() {
 			}
 		}
 
-		if(reader.status.code == ECSACT_PARSE_STATUS_EXPECTED_STATEMENT_END) {
+		if(reader.status.code == ECSACT_PARSE_STATUS_ASSUMED_STATEMENT_END) {
 			const auto& source = reader.sources.top();
 			if(ecsact::detail::is_empty_or_whitespace(source)) {
 				reader.pop_discard();
