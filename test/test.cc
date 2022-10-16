@@ -5,9 +5,8 @@
 #include <filesystem>
 #include <unordered_map>
 #include <functional>
-#include "ecsact/interpret/eval.h"
-#include "ecsact/runtime/meta.h"
 #include "ecsact/runtime/meta.hh"
+#include "ecsact/interpret/eval.hh"
 #include "bazel_sundry/runfiles.hh"
 
 namespace fs = std::filesystem;
@@ -50,15 +49,14 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 	ASSERT_TRUE(runfiles);
 
 	auto test_ecsact = runfiles->Rlocation(
-		"ecsact_interop/test/test.ecsact"
+		"ecsact_interpret/test/test.ecsact"
 	);
 	ASSERT_FALSE(test_ecsact.empty());
 	ASSERT_TRUE(fs::exists(test_ecsact));
 
-	auto files = std::array{test_ecsact.c_str()};
-
 	auto test_interop = [&] {
-		ecsact_parse_runtime_interop(files.data(), files.size());
+		auto errors = ecsact::eval_files({test_ecsact});
+		ASSERT_TRUE(errors.empty());
 
 		// Only 1 package
 		ASSERT_EQ(ecsact_meta_count_packages(), 1);

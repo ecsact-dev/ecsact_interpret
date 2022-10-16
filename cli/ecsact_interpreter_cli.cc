@@ -33,7 +33,13 @@ int main() {
 
 	while(reader.can_read_next()) {
 		if(last_line != reader.current_line) {
-			if(reader.status.code == ECSACT_PARSE_STATUS_EXPECTED_STATEMENT_END) {
+			const bool not_none_statement =
+				reader.statements.empty() ||
+				reader.statements.top().type != ECSACT_STATEMENT_NONE;
+			const bool expected_end =
+				reader.status.code == ECSACT_PARSE_STATUS_EXPECTED_STATEMENT_END;
+
+			if(not_none_statement && expected_end) {
 				std::cout << COLOR_GREY ".. " COLOR_RESET;
 			} else if(reader.statements.empty()) {
 				std::cout << "\r" COLOR_GREY " > " COLOR_RESET;
@@ -110,6 +116,22 @@ int main() {
 					<< COLOR_GREY " [ new package " COLOR_CYAN
 					<< ecsact::meta::package_name(*current_package)
 					<< COLOR_GREY " ]\n" COLOR_RESET;
+			} else if(last_statement.type == ECSACT_STATEMENT_UNKNOWN) {
+				std::string err_highlight;
+				err_highlight.reserve(last_source.size() + 3);
+				err_highlight += "   ";
+				for(auto c : last_source) {
+					if(std::isspace(c)) {
+						err_highlight.push_back(c);
+					} else {
+						err_highlight.push_back('^');
+					}
+				}
+				std::cerr
+					<< COLOR_RED << err_highlight << COLOR_RESET " "
+					<< "Unknown statement.\n";
+
+				reader.pump_status_code();
 			} else if(current_package) {
 				auto eval_err = ecsact_eval_statement(
 					*current_package,

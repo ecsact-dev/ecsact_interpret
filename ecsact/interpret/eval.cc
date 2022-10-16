@@ -325,12 +325,12 @@ static ecsact_eval_error eval_none_statement
 }
 
 static ecsact_eval_error eval_unknown_statement
-	( ecsact_package_id                   package_id
-	, std::span<const ecsact_statement>&  context_stack
-	, const ecsact_statement&             statement
+	( ecsact_package_id
+	, std::span<const ecsact_statement>&
+	, const ecsact_statement&
 	)
 {
-	throw std::exception("Unimplemented eval_unknown_statement");
+	return {};
 }
 
 static ecsact_eval_error eval_import_statement

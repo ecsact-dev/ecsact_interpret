@@ -27,7 +27,7 @@ std::vector<parse_eval_error> ecsact::eval_files
 	using ecsact::detail::stream_get_until;
 	using ecsact::detail::try_top;
 	using ecsact::detail::eval_parse_state;
-	using ecsact::detail::open_and_parse_package_statement;
+	using ecsact::detail::parse_package_statements;
 	using ecsact::detail::parse_imports;
 	using ecsact::detail::check_unknown_imports;
 	using ecsact::detail::check_cyclic_imports;
@@ -42,9 +42,10 @@ std::vector<parse_eval_error> ecsact::eval_files
 	for(auto file_path : files) {
 		auto& file_state = file_states.emplace_back();
 		file_state.file_path = file_path;
+		file_state.reader.stream.open(file_path);
 	}
 
-	open_and_parse_package_statement(file_states, errors);
+	parse_package_statements(file_states, errors);
 	if(!errors.empty()) return errors;
 
 	parse_imports(file_states, errors);

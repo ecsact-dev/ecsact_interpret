@@ -126,29 +126,35 @@ struct statement_reader {
 		sources.pop();
 		current_context = nullptr;
 	}
-
-	void eval() {
-		auto& last_statement = statements.top();
-		auto eval_error = ecsact_eval_statement(
-			current_context,
-			&last_statement
-		);
-	}
 };
 
 template<typename InputStream>
 struct eval_parse_state {
 	std::filesystem::path file_path;
 	statement_reader<InputStream> reader;
+	std::optional<ecsact_package_id> package_id;
+	std::vector<std::string> imports;
 };
 
 template<typename InputStream>
-void open_and_parse_package_statement
+void parse_package_statements
 	( std::vector<eval_parse_state<InputStream>>&  file_states
 	, std::vector<parse_eval_error>&               out_errors
 	)
 {
+	auto source_index = 0;
+	for(auto& state : file_states) {
+		state.reader.read_next();
+		
+		out_errors.push_back(parse_eval_error{
+			.source_index = source_index,
+			.line = state.reader.current_line,
+			.character = state.reader.current_character,
+			.error_message = "",
+		});
 
+		source_index += 1;
+	}
 }
 
 template<typename InputStream>

@@ -41,6 +41,9 @@ typedef enum ecsact_eval_error_code {
 	/// the same generates block.
 	ECSACT_EVAL_ERR_GENERATES_DUPLICATE_COMPONENT_CONSTRAINTS,
 
+	/// When evaluating a file the first statement was not a package statement.
+	ECSACT_EVAL_ERR_EXPECTED_PACKAGE_STATEMENT,
+
 	/// An import statement was found after a declaration was already made.
 	ECSACT_EVAL_ERR_LATE_IMPORT,
 
