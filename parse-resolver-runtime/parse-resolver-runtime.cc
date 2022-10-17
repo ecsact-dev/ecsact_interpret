@@ -175,18 +175,6 @@ static system_like& get_system_like(ecsact_system_like_id id) {
 	throw std::invalid_argument("Invalid system-like ID");
 }
 
-static component_like& get_component_like(ecsact_component_like_id id) {
-	if(comp_defs.contains((ecsact_component_id)id)) {
-		return comp_defs.at((ecsact_component_id)id);
-	}
-
-	if(trans_defs.contains((ecsact_transient_id)id)) {
-		return trans_defs.at((ecsact_transient_id)id);
-	}
-
-	throw std::invalid_argument("Invalid component-like ID");
-}
-
 template<typename T>
 static T next_id() {
 	return static_cast<T>(last_id++);
@@ -889,7 +877,6 @@ void ecsact_add_child_system
 	auto& pkg_def = package_defs.at(owner_package_id(parent));
 
 	if((int32_t)child_def.parent_system_id != -1) {
-		auto& prev_parent_def = get_system_like(child_def.parent_system_id);
 		ecsact_remove_child_system(parent, child);
 	}
 	

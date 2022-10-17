@@ -373,7 +373,7 @@ static ecsact_eval_error eval_import_statement
 	, const ecsact_statement&             statement
 	)
 {
-	throw std::exception("Unimplemented eval_import_statement");
+	throw std::runtime_error("Unimplemented eval_import_statement");
 }
 
 static ecsact_eval_error eval_component_statement
@@ -1242,7 +1242,7 @@ ecsact_eval_error ecsact_eval_statement
 			);
 	}
 
-	throw std::exception("Unhandled statement type");
+	throw std::runtime_error("Unhandled statement type");
 }
 
 ecsact_package_id ecsact_eval_package_statement

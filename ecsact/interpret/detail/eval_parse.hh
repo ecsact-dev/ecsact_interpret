@@ -417,7 +417,6 @@ void parse_eval_declarations
 			continue;
 		}
 
-		auto& last_statement = file_state.reader.statements.top();
 		auto eval_err = ecsact_eval_statement(
 			*file_state.package_id,
 			static_cast<int32_t>(file_state.reader.statements.size()),
