@@ -20,6 +20,15 @@
 				"//test:test"
 			],
 			"group": "build"
+		},
+		{
+			"label": "build //cli:ecsact_interpreter",
+			"command": "bazel",
+			"type": "shell",
+			"args": [
+				"build",
+				"//cli:ecsact_interpreter"
+			]
 		}
 	]
 }

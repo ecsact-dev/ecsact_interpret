@@ -11,7 +11,23 @@
 				"type": "cppvsdbg",
 				"program": "${workspaceRoot}/bazel-bin/test/test.exe"
 			},
-			"preLaunchTask": "build //test:test"
+			"preLaunchTask": "build //test:test",
+		},
+		{
+			"name": "run //cli:ecsact_interpreter",
+			"request": "launch",
+			"program": "${workspaceRoot}/bazel-bin/cli/ecsact_interpreter",
+			"cwd": "${workspaceFolder}",
+			"type": "lldb",
+			"console": "externalTerminal",
+			"windows": {
+				"type": "cppvsdbg",
+				"program": "${workspaceRoot}/bazel-bin/cli/ecsact_interpreter.exe"
+			},
+			"preLaunchTask": "build //cli:ecsact_interpreter",
+			"sourceMap": {
+				"E:/.cache/bazel/output_base/execroot/ecsact_interpret": "${workspaceFolder}"
+			}
 		}
 	]
 }

@@ -1,19 +1,26 @@
-workspace(name = "ecsact_parse_runtime_interop")
+workspace(name = "ecsact_interpret")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
+    name = "magic_enum",
+    sha256 = "6b948d1680f02542d651fc82154a9e136b341ce55c5bf300736b157e23f9df11",
+    strip_prefix = "magic_enum-0.8.1",
+    url = "https://github.com/Neargye/magic_enum/archive/refs/tags/v0.8.1.tar.gz",
+)
+
+http_archive(
     name = "ecsact_runtime",
-    sha256 = "1858d427a8e9892005e17cf97035a464b1b1f2628d6c7d5a1fc7ea2037fe56a7",
-    strip_prefix = "ecsact_runtime-7b64ae6ebd4c3e75b8c18e0437ee88233492dc93",
-    url = "https://github.com/ecsact-dev/ecsact_runtime/archive/7b64ae6ebd4c3e75b8c18e0437ee88233492dc93.zip",
+    sha256 = "f7b5f5cc5b70620934be48090048e9092dbc86ba4e027959d65fd1dd46c36a77",
+    strip_prefix = "ecsact_runtime-475cae75c657b2570b1041264670c026de412814",
+    url = "https://github.com/ecsact-dev/ecsact_runtime/archive/475cae75c657b2570b1041264670c026de412814.zip",
 )
 
 http_archive(
     name = "ecsact_parse",
-    sha256 = "b5867161f0d7435990d243bf205e3c3a0af30ee75d8b8c7105d02c97578b1a71",
-    strip_prefix = "ecsact_parse-0e377197e3c9e8db2e4f43cb25ff19a9e97ef994",
-    url = "https://github.com/ecsact-dev/ecsact_parse/archive/0e377197e3c9e8db2e4f43cb25ff19a9e97ef994.zip",
+    sha256 = "b3f65f9c5ec62d77647c32736738458230469cac937eab82d46a577e52b7fc2a",
+    strip_prefix = "ecsact_parse-45a30d62a0c53acb3a329fa9df250c20f0b384d1",
+    url = "https://github.com/ecsact-dev/ecsact_parse/archive/45a30d62a0c53acb3a329fa9df250c20f0b384d1.zip",
 )
 
 load("@ecsact_parse//:repositories.bzl", "ecsact_parse_dependencies")
