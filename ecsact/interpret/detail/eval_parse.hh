@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <cassert>
 #include "magic_enum.hpp"
+#include "ecsact/runtime/dynamic.h"
 #include "ecsact/interpret/parse_eval_error.hh"
 
 #include "./fixed_stack.hh"
@@ -339,6 +340,12 @@ void eval_package_statements
 			},
 		};
 		state.package_id = ecsact_eval_package_statement(&faux_statement);
+		auto source_file_path = state.file_path.string();
+		ecsact_set_package_source_file_path(
+			*state.package_id,
+			source_file_path.c_str(),
+			static_cast<int32_t>(source_file_path.size())
+		);
 	}
 }
 
