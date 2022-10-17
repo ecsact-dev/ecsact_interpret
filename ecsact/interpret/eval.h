@@ -47,6 +47,9 @@ typedef enum ecsact_eval_error_code {
 	/// An import statement was found after a declaration was already made.
 	ECSACT_EVAL_ERR_LATE_IMPORT,
 
+	/// Could not find package with name given to import.
+	ECSACT_EVAL_ERR_UNKNOWN_IMPORT,
+
 	/// The given statement was not expected in the given context.
 	ECSACT_EVAL_ERR_UNEXPECTED_STATEMENT,
 } ecsact_eval_error_code;

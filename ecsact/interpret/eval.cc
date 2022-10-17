@@ -373,7 +373,24 @@ static ecsact_eval_error eval_import_statement
 	, const ecsact_statement&             statement
 	)
 {
-	throw std::runtime_error("Unimplemented eval_import_statement");
+	auto& data = statement.data.import_statement;
+	std::string import_name(
+		data.import_package_name.data,
+		data.import_package_name.length
+	);
+	for(auto dep_pkg_id : ecsact::meta::get_package_ids()) {
+		if(dep_pkg_id == package_id) continue;
+		if(ecsact::meta::package_name(dep_pkg_id) == import_name) {
+			// TODO(zaucy): Import support
+			// ecsact_add_dependency(package_id, dep_pkg_id);
+			return {};
+		}
+	}
+
+	return ecsact_eval_error{
+		.code = ECSACT_EVAL_ERR_UNKNOWN_IMPORT,
+		.relevant_content = data.import_package_name,
+	};
 }
 
 static ecsact_eval_error eval_component_statement
