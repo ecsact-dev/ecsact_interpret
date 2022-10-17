@@ -727,7 +727,7 @@ static ecsact_eval_error eval_user_type_field_statement
 	auto user_field_type = find_user_field_type_by_name(
 		package_id,
 		user_type_name,
-		data.user_type_name.length
+		data.length
 	);
 	if(!user_field_type) {
 		return ecsact_eval_error{
