@@ -51,8 +51,9 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 
 	auto errors = ecsact::eval_files({test_ecsact});
 	for(auto& err : errors) {
-		std::cerr << "[ERROR] test/test.ecsact:" << err.line << ":" << err.character
-							<< " " << err.error_message << "\n";
+		std::cerr //
+			<< "[ERROR] test/test.ecsact:" << err.line << ":" << err.character << " "
+			<< err.error_message << "\n";
 	}
 	ASSERT_TRUE(errors.empty());
 
