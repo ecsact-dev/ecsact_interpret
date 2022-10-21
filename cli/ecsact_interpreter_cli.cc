@@ -15,9 +15,15 @@
 #define COLOR_RESET "\033[0m"
 
 bool is_repl_cmd(const std::string& source, std::string cmd_str) {
-	if(source == cmd_str) return true;
-	if(source == cmd_str + "\n") return true;
-	if(source.ends_with("\n" + cmd_str + "\n")) return true;
+	if(source == cmd_str) {
+		return true;
+	}
+	if(source == cmd_str + "\n") {
+		return true;
+	}
+	if(source.ends_with("\n" + cmd_str + "\n")) {
+		return true;
+	}
 
 	return false;
 }
@@ -27,17 +33,16 @@ int main() {
 	std::ios_base::sync_with_stdio(false);
 
 	ecsact::detail::statement_reader<std::istream&> reader{std::cin};
-	std::optional<ecsact_package_id> current_package{};
+	std::optional<ecsact_package_id>                current_package{};
 
 	auto last_line = reader.current_line - 1;
 
 	while(reader.can_read_next()) {
 		if(last_line != reader.current_line) {
-			const bool not_none_statement =
-				reader.statements.empty() ||
+			const bool not_none_statement = reader.statements.empty() ||
 				reader.statements.top().type != ECSACT_STATEMENT_NONE;
-			const bool expected_end =
-				reader.status.code == ECSACT_PARSE_STATUS_ASSUMED_STATEMENT_END;
+			const bool expected_end = reader.status.code ==
+				ECSACT_PARSE_STATUS_ASSUMED_STATEMENT_END;
 
 			if(not_none_statement && expected_end) {
 				std::cout << COLOR_GREY ".. " COLOR_RESET;
@@ -76,7 +81,7 @@ int main() {
 				reader.pop_rewind();
 			}
 		} else if(ecsact_is_error_parse_status_code(reader.status.code)) {
-			auto& last_source = reader.sources.top();
+			auto&       last_source = reader.sources.top();
 			std::string err_highlight;
 			err_highlight.reserve(last_source.size() + 3);
 			err_highlight += "   ";
@@ -88,8 +93,7 @@ int main() {
 				}
 			}
 
-			std::cerr
-				<< COLOR_RED << err_highlight << COLOR_RESET " ";
+			std::cerr << COLOR_RED << err_highlight << COLOR_RESET " ";
 
 			switch(reader.status.code) {
 				case ECSACT_PARSE_STATUS_UNEXPECTED_EOF:
@@ -108,14 +112,12 @@ int main() {
 			auto& last_statement = reader.statements.top();
 			auto& last_source = reader.sources.top();
 			if(last_statement.type == ECSACT_STATEMENT_PACKAGE) {
-				current_package = ecsact_eval_package_statement(
-					&last_statement.data.package_statement
-				);
+				current_package =
+					ecsact_eval_package_statement(&last_statement.data.package_statement);
 				reader.pump_status_code();
-				std::cout
-					<< COLOR_GREY " [ new package " COLOR_CYAN
-					<< ecsact::meta::package_name(*current_package)
-					<< COLOR_GREY " ]\n" COLOR_RESET;
+				std::cout << COLOR_GREY " [ new package " COLOR_CYAN
+									<< ecsact::meta::package_name(*current_package)
+									<< COLOR_GREY " ]\n" COLOR_RESET;
 			} else if(last_statement.type == ECSACT_STATEMENT_UNKNOWN) {
 				std::string err_highlight;
 				err_highlight.reserve(last_source.size() + 3);
@@ -127,9 +129,8 @@ int main() {
 						err_highlight.push_back('^');
 					}
 				}
-				std::cerr
-					<< COLOR_RED << err_highlight << COLOR_RESET " "
-					<< "Unknown statement.\n";
+				std::cerr << COLOR_RED << err_highlight << COLOR_RESET " "
+									<< "Unknown statement.\n";
 
 				reader.pump_status_code();
 			} else if(current_package) {
@@ -151,8 +152,7 @@ int main() {
 						std::cerr
 							<< std::string(offset + 3, ' ') << COLOR_RED "^" COLOR_RESET
 							<< " " << magic_enum::enum_name(eval_err.code).substr(16)
-							<< COLOR_GREY " (" << eval_err.code << ")" COLOR_RESET
-							<< "\n";
+							<< COLOR_GREY " (" << eval_err.code << ")" COLOR_RESET << "\n";
 					} else {
 						std::cerr << err_content << "\n";
 					}
@@ -170,10 +170,10 @@ int main() {
 						err_highlight.push_back('^');
 					}
 				}
-				std::cerr
-					<< COLOR_RED << err_highlight << COLOR_RESET " "
-					<< "Invalid first statement. Must start with package statement."
-					<< "\n\n";
+				std::cerr << COLOR_RED << err_highlight << COLOR_RESET " "
+									<< "Invalid first statement. Must start with package "
+										 "statement."
+									<< "\n\n";
 				reader.pop_discard();
 			}
 		}

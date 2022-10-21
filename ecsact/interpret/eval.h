@@ -9,12 +9,12 @@ typedef enum ecsact_eval_error_code {
 	ECSACT_EVAL_OK,
 
 	/// There was an evaluation attempted multiple times on a statement with the
-	/// same ID. Statement IDs must be unique. 
+	/// same ID. Statement IDs must be unique.
 	ECSACT_EVAL_ERR_DUPLICANT_STATEMENT_ID,
 
 	/// A declaration with the name given already exists.
 	ECSACT_EVAL_ERR_DECLARATION_NAME_TAKEN,
-	
+
 	/// Statement cannot be evaluated in context provided.
 	ECSACT_EVAL_ERR_INVALID_CONTEXT,
 
@@ -56,12 +56,12 @@ typedef enum ecsact_eval_error_code {
 
 typedef struct ecsact_eval_error {
 	ecsact_eval_error_code code;
-	ecsact_statement_sv relevant_content;
+	ecsact_statement_sv    relevant_content;
 } ecsact_eval_error;
 
-ecsact_package_id ecsact_eval_package_statement
-	( const ecsact_package_statement* package_statement
-	);
+ecsact_package_id ecsact_eval_package_statement(
+	const ecsact_package_statement* package_statement
+);
 
 /**
  * Invokes the appropriate ecsact runtime dynamic module methods for the given
@@ -73,15 +73,15 @@ ecsact_package_id ecsact_eval_package_statement
  *        'top' element is the statement that is evaluated.
  * @returns error details
  */
-ecsact_eval_error ecsact_eval_statement
-	( ecsact_package_id        package_id
-	, int32_t                  statement_stack_size
-	, const ecsact_statement*  statement_stack
-	);
+ecsact_eval_error ecsact_eval_statement(
+	ecsact_package_id       package_id,
+	int32_t                 statement_stack_size,
+	const ecsact_statement* statement_stack
+);
 
 /**
  * Clears memory of all previous successfully evaluated statements.
  */
 void ecsact_eval_reset();
 
-#endif//ECSACT_INTERPRET_EVAL_H
+#endif // ECSACT_INTERPRET_EVAL_H

@@ -19,14 +19,14 @@ constexpr std::array statement_ending_chars{';', '{', '}', '\n'};
 
 template<typename InputStream>
 struct statement_reader {
-	InputStream stream;
+	InputStream                       stream;
 	fixed_stack<ecsact_statement, 16> statements;
-	fixed_stack<std::string, 16> sources;
-	std::vector<std::string> next_statement_sources;
-	ecsact_statement* current_context = nullptr;
-	ecsact_parse_status status = {};
-	int current_line = 0;
-	int current_character = 0;
+	fixed_stack<std::string, 16>      sources;
+	std::vector<std::string>          next_statement_sources;
+	ecsact_statement*                 current_context = nullptr;
+	ecsact_parse_status               status = {};
+	int                               current_line = 0;
+	int                               current_character = 0;
 
 	void reset() {
 		current_line = 0;
@@ -43,7 +43,7 @@ struct statement_reader {
 	}
 
 	void read_next() {
-		auto previous_statement = try_top(statements);
+		auto  previous_statement = try_top(statements);
 		auto& next_statement = statements.emplace();
 		auto& next_source = sources.emplace();
 
@@ -75,11 +75,8 @@ struct statement_reader {
 		auto read_data = next_source.data();
 		auto read_size = next_source.size();
 
-		current_context = previous_statement
-			? &previous_statement->get()
-			: nullptr;
-		[[maybe_unused]]
-		auto parse_read_amount = ecsact_parse_statement(
+		current_context = previous_statement ? &previous_statement->get() : nullptr;
+		[[maybe_unused]] auto parse_read_amount = ecsact_parse_statement(
 			read_data,
 			read_size,
 			current_context,
@@ -141,20 +138,19 @@ struct statement_reader {
 
 template<typename InputStream>
 struct eval_parse_state {
-	std::filesystem::path file_path;
-	statement_reader<InputStream> reader;
+	std::filesystem::path            file_path;
+	statement_reader<InputStream>    reader;
 	std::optional<ecsact_package_id> package_id;
-	bool main_package = false;
-	std::string package_name;
-	std::vector<std::string> imports;
+	bool                             main_package = false;
+	std::string                      package_name;
+	std::vector<std::string>         imports;
 };
 
 template<typename InputStream>
-parse_eval_error to_parse_eval_error
-	( int32_t                               source_index
-	, const statement_reader<InputStream>&  reader
-	)
-{
+parse_eval_error to_parse_eval_error(
+	int32_t                              source_index,
+	const statement_reader<InputStream>& reader
+) {
 	std::string error_message;
 
 	switch(reader.status.code) {
@@ -178,12 +174,11 @@ parse_eval_error to_parse_eval_error
 }
 
 template<typename InputStream>
-parse_eval_error to_parse_eval_error
-	( int32_t                               source_index
-	, const statement_reader<InputStream>&  reader
-	, ecsact_eval_error                     eval_err
-	)
-{
+parse_eval_error to_parse_eval_error(
+	int32_t                              source_index,
+	const statement_reader<InputStream>& reader,
+	ecsact_eval_error                    eval_err
+) {
 	std::string relevant_content(
 		eval_err.relevant_content.data,
 		eval_err.relevant_content.length
@@ -195,8 +190,7 @@ parse_eval_error to_parse_eval_error
 			break;
 	}
 
-	std::string error_message =
-		err_code_str + " (" +
+	std::string error_message = err_code_str + " (" +
 		std::to_string(magic_enum::enum_integer(eval_err.code)) + ")";
 	if(!relevant_content.empty()) {
 		error_message += " near: " + relevant_content;
@@ -211,17 +205,16 @@ parse_eval_error to_parse_eval_error
 }
 
 template<typename InputStream>
-void parse_package_statements
-	( std::vector<eval_parse_state<InputStream>>&  file_states
-	, std::vector<parse_eval_error>&               out_errors
-	)
-{
+void parse_package_statements(
+	std::vector<eval_parse_state<InputStream>>& file_states,
+	std::vector<parse_eval_error>&              out_errors
+) {
 	auto source_index = 0;
 	for(auto& state : file_states) {
 		state.reader.read_next();
 
 		auto& statement = state.reader.statements.top();
-		
+
 		if(ecsact_is_error_parse_status_code(state.reader.status.code)) {
 			out_errors.push_back(to_parse_eval_error(source_index, state.reader));
 		} else {
@@ -230,8 +223,8 @@ void parse_package_statements
 					.source_index = source_index,
 					.line = state.reader.current_line,
 					.character = state.reader.current_character,
-					.error_message =
-						"Must have package statement as firist statement in file.",
+					.error_message = "Must have package statement as firist statement in "
+													 "file.",
 				});
 			} else {
 				state.main_package = statement.data.package_statement.main;
@@ -249,14 +242,12 @@ void parse_package_statements
 }
 
 template<typename InputStream>
-void parse_imports
-	( std::vector<eval_parse_state<InputStream>>&  file_states
-	, std::vector<parse_eval_error>&               out_errors
-	)
-{
+void parse_imports(
+	std::vector<eval_parse_state<InputStream>>& file_states,
+	std::vector<parse_eval_error>&              out_errors
+) {
 	auto source_index = 0;
 	for(auto& state : file_states) {
-
 		for(;;) {
 			state.reader.read_next();
 
@@ -282,11 +273,10 @@ void parse_imports
 }
 
 template<typename InputStream>
-void check_unknown_imports
-	( std::vector<eval_parse_state<InputStream>>&  file_states
-	, std::vector<parse_eval_error>&               out_errors
-	)
-{
+void check_unknown_imports(
+	std::vector<eval_parse_state<InputStream>>& file_states,
+	std::vector<parse_eval_error>&              out_errors
+) {
 	auto source_index = 0;
 	for(auto& state : file_states) {
 		for(auto& import_name : state.imports) {
@@ -317,20 +307,17 @@ void check_unknown_imports
 }
 
 template<typename InputStream>
-void check_cyclic_imports
-	( std::vector<eval_parse_state<InputStream>>&  file_states
-	, std::vector<parse_eval_error>&               out_errors
-	)
-{
-
+void check_cyclic_imports(
+	std::vector<eval_parse_state<InputStream>>& file_states,
+	std::vector<parse_eval_error>&              out_errors
+) {
 }
 
 template<typename InputStream>
-void eval_package_statements
-	( std::vector<eval_parse_state<InputStream>>&  file_states
-	, std::vector<parse_eval_error>&               out_errors
-	)
-{
+void eval_package_statements(
+	std::vector<eval_parse_state<InputStream>>& file_states,
+	std::vector<parse_eval_error>&              out_errors
+) {
 	for(auto& state : file_states) {
 		ecsact_package_statement faux_statement{
 			.main = state.main_package,
@@ -350,12 +337,11 @@ void eval_package_statements
 }
 
 template<typename InputStream>
-void eval_imports
-	( int32_t                         source_index
-	, eval_parse_state<InputStream>&  file_state
-	, std::vector<parse_eval_error>&  out_errors
-	)
-{
+void eval_imports(
+	int32_t                        source_index,
+	eval_parse_state<InputStream>& file_state,
+	std::vector<parse_eval_error>& out_errors
+) {
 	for(auto& import_name : file_state.imports) {
 		ecsact_statement faux_import_statement{
 			.type = ECSACT_STATEMENT_IMPORT,
@@ -367,27 +353,19 @@ void eval_imports
 			}},
 		};
 
-		auto eval_err = ecsact_eval_statement(
-			*file_state.package_id,
-			1,
-			&faux_import_statement
-		);
+		auto eval_err =
+			ecsact_eval_statement(*file_state.package_id, 1, &faux_import_statement);
 
 		if(eval_err.code != ECSACT_EVAL_OK) {
-			out_errors.push_back(to_parse_eval_error(
-				source_index,
-				file_state.reader,
-				eval_err
-			));
+			out_errors.push_back(
+				to_parse_eval_error(source_index, file_state.reader, eval_err)
+			);
 		}
 	}
 }
 
 template<typename InputStream>
-void skip_until_current_block_end
-	( statement_reader<InputStream>& reader
-	)
-{
+void skip_until_current_block_end(statement_reader<InputStream>& reader) {
 	assert(reader.status.code == ECSACT_PARSE_STATUS_BLOCK_BEGIN);
 	int block_depth = 1;
 	while(block_depth > 0) {
@@ -407,20 +385,17 @@ void skip_until_current_block_end
 }
 
 template<typename InputStream>
-void parse_eval_declarations
-	( int32_t                         source_index
-	, eval_parse_state<InputStream>&  file_state
-	, std::vector<parse_eval_error>&  out_errors
-	)
-{
+void parse_eval_declarations(
+	int32_t                        source_index,
+	eval_parse_state<InputStream>& file_state,
+	std::vector<parse_eval_error>& out_errors
+) {
 	while(file_state.reader.can_read_next()) {
 		file_state.reader.read_next();
 
 		if(ecsact_is_error_parse_status_code(file_state.reader.status.code)) {
-			out_errors.push_back(to_parse_eval_error(
-				source_index,
-				file_state.reader
-			));
+			out_errors.push_back(to_parse_eval_error(source_index, file_state.reader)
+			);
 			continue;
 		}
 
@@ -429,15 +404,13 @@ void parse_eval_declarations
 			static_cast<int32_t>(file_state.reader.statements.size()),
 			file_state.reader.statements.data()
 		);
-		
+
 		if(eval_err.code == ECSACT_EVAL_OK) {
 			file_state.reader.pump_status_code();
 		} else {
-			out_errors.push_back(to_parse_eval_error(
-				source_index,
-				file_state.reader,
-				eval_err
-			));
+			out_errors.push_back(
+				to_parse_eval_error(source_index, file_state.reader, eval_err)
+			);
 
 			if(file_state.reader.status.code == ECSACT_PARSE_STATUS_BLOCK_BEGIN) {
 				skip_until_current_block_end(file_state.reader);
@@ -449,10 +422,8 @@ void parse_eval_declarations
 }
 
 template<typename InputStream>
-std::vector<std::reference_wrapper<eval_parse_state<InputStream>>> get_sorted_states
-	( std::vector<eval_parse_state<InputStream>>&  file_states
-	)
-{
+std::vector<std::reference_wrapper<eval_parse_state<InputStream>>>
+get_sorted_states(std::vector<eval_parse_state<InputStream>>& file_states) {
 	std::vector<std::reference_wrapper<eval_parse_state<InputStream>>> result;
 	result.reserve(file_states.size());
 
@@ -480,4 +451,4 @@ std::vector<std::reference_wrapper<eval_parse_state<InputStream>>> get_sorted_st
 	return result;
 }
 
-}
+} // namespace ecsact::detail
