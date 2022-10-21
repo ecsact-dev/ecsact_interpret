@@ -173,8 +173,7 @@ int main() {
 				}
 				std::cerr //
 					<< COLOR_RED << err_highlight << COLOR_RESET " "
-					<< "Invalid first statement. Must start with package "
-						 "statement."
+					<< "Invalid first statement. Must start with package statement."
 					<< "\n\n";
 				reader.pop_discard();
 			}
