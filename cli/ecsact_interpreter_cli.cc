@@ -129,8 +129,9 @@ int main() {
 						err_highlight.push_back('^');
 					}
 				}
-				std::cerr << COLOR_RED << err_highlight << COLOR_RESET " "
-									<< "Unknown statement.\n";
+				std::cerr //
+					<< COLOR_RED << err_highlight << COLOR_RESET " "
+					<< "Unknown statement.\n";
 
 				reader.pump_status_code();
 			} else if(current_package) {
@@ -149,7 +150,7 @@ int main() {
 					);
 					int offset = eval_err.relevant_content.data - last_source.c_str();
 					if(offset < last_source.size()) {
-						std::cerr
+						std::cerr //
 							<< std::string(offset + 3, ' ') << COLOR_RED "^" COLOR_RESET
 							<< " " << magic_enum::enum_name(eval_err.code).substr(16)
 							<< COLOR_GREY " (" << eval_err.code << ")" COLOR_RESET << "\n";
@@ -170,10 +171,11 @@ int main() {
 						err_highlight.push_back('^');
 					}
 				}
-				std::cerr << COLOR_RED << err_highlight << COLOR_RESET " "
-									<< "Invalid first statement. Must start with package "
-										 "statement."
-									<< "\n\n";
+				std::cerr //
+					<< COLOR_RED << err_highlight << COLOR_RESET " "
+					<< "Invalid first statement. Must start with package "
+						 "statement."
+					<< "\n\n";
 				reader.pop_discard();
 			}
 		}
