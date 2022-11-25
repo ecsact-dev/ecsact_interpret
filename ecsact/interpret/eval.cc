@@ -1172,10 +1172,11 @@ void ecsact::detail::check_file_eval_error(
 	if(status.code == ECSACT_PARSE_STATUS_BLOCK_END) {
 		if(statement.type == ECSACT_STATEMENT_ACTION) {
 			auto& data = statement.data.action_statement;
-			auto  act_id = find_by_name<ecsact_action_id>(
-        package_id,
-        std::string(data.action_name.data, data.action_name.length)
-      );
+
+			auto act_id = find_by_name<ecsact_action_id>(
+				package_id,
+				std::string(data.action_name.data, data.action_name.length)
+			);
 
 			auto caps = ecsact::meta::system_capabilities(*act_id);
 			if(caps.empty()) {
