@@ -22,6 +22,16 @@
 			"group": "build"
 		},
 		{
+			"label": "build //test/errors:no_capabilities",
+			"command": "bazel",
+			"type": "shell",
+			"args": [
+				"build",
+				"//test/errors:no_capabilities"
+			],
+			"group": "build"
+		},
+		{
 			"label": "build //cli:ecsact_interpreter",
 			"command": "bazel",
 			"type": "shell",

@@ -6,8 +6,10 @@
 #include <cassert>
 #include "magic_enum.hpp"
 #include "ecsact/runtime/dynamic.h"
+#include "ecsact/runtime/meta.hh"
 #include "ecsact/interpret/parse_eval_error.hh"
 
+#include "./file_eval_error.hh"
 #include "./fixed_stack.hh"
 #include "./stack_util.hh"
 #include "./string_util.hh"
@@ -197,6 +199,7 @@ parse_eval_error to_parse_eval_error(
 	}
 
 	return parse_eval_error{
+		.eval_error = eval_err.code,
 		.source_index = source_index,
 		.line = reader.current_line,
 		.character = reader.current_character,
@@ -404,6 +407,16 @@ void parse_eval_declarations(
 			static_cast<int32_t>(file_state.reader.statements.size()),
 			file_state.reader.statements.data()
 		);
+
+		if(eval_err.code == ECSACT_EVAL_OK) {
+			ecsact::detail::check_file_eval_error(
+				eval_err,
+				*file_state.package_id,
+				file_state.reader.status,
+				*file_state.reader.current_context,
+				""
+			);
+		}
 
 		if(eval_err.code == ECSACT_EVAL_OK) {
 			file_state.reader.pump_status_code();
