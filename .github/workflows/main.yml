@@ -50,7 +50,7 @@ jobs:
             ~/.cache/bazel-disk-cache
           key: ${{runner.os}}-bazel-cache
       - uses: actions/checkout@v3
-      - run: bazel build --config=ci //...
+      - run: bazel build --config=ci --config=no-warnings //...
   test-linux:
     runs-on: ubuntu-latest
     needs: build-linux
@@ -62,4 +62,4 @@ jobs:
             ~/.cache/bazel-disk-cache
           key: ${{runner.os}}-bazel-cache
       - uses: actions/checkout@v3
-      - run: bazel test --config=ci //...
+      - run: bazel test --config=ci --config=no-warnings //...
