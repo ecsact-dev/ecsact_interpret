@@ -214,19 +214,27 @@ void parse_package_statements(
 ) {
 	auto source_index = 0;
 	for(auto& state : file_states) {
-		state.reader.read_next();
+		for(;;) {
+			state.reader.read_next();
 
-		auto& statement = state.reader.statements.top();
+			if(ecsact_is_error_parse_status_code(state.reader.status.code)) {
+				out_errors.push_back(to_parse_eval_error(source_index, state.reader));
+				break;
+			}
 
-		if(ecsact_is_error_parse_status_code(state.reader.status.code)) {
-			out_errors.push_back(to_parse_eval_error(source_index, state.reader));
-		} else {
+			auto& statement = state.reader.statements.top();
+
+			if(statement.type == ECSACT_STATEMENT_NONE) {
+				continue;
+			}
+
 			if(statement.type != ECSACT_STATEMENT_PACKAGE) {
 				out_errors.push_back(parse_eval_error{
+					.eval_error = ECSACT_EVAL_ERR_EXPECTED_PACKAGE_STATEMENT,
 					.source_index = source_index,
 					.line = state.reader.current_line,
 					.character = state.reader.current_character,
-					.error_message = "Must have package statement as firist statement in "
+					.error_message = "Must have package statement as first statement in "
 													 "file.",
 				});
 			} else {
@@ -238,6 +246,7 @@ void parse_package_statements(
 			}
 
 			state.reader.pump_status_code();
+			break;
 		}
 
 		source_index += 1;
