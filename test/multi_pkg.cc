@@ -24,11 +24,8 @@ TEST(MultiPkgTest, NoErrors) {
 			EXPECT_EQ(ecsact_meta_count_dependencies(pkg_id), 3) //
 				<< "Expected main package to have 3 dependencies. One for each import";
 		} else if(pkg_name == "multi.pkg.a") {
-
 		} else if(pkg_name == "multi.pkg.b") {
-
 		} else if(pkg_name == "multi.pkg.c") {
-			
 		} else {
 			EXPECT_TRUE(false) << "No tests for package: " << pkg_name;
 		}
