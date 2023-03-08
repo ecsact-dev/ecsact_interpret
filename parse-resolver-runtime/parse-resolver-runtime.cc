@@ -886,9 +886,9 @@ void ecsact_add_dependency(
 	ecsact_package_id dependency
 ) {
 	auto& tgt_pkg_def = package_defs.at(target);
-	auto& dep_pkg_def = package_defs.at(dependency);
-
-	tgt_pkg_def.dependencies.push_back(dependency);
+	if(package_defs.contains(dependency)) {
+		tgt_pkg_def.dependencies.push_back(dependency);
+	}
 }
 
 const char* ecsact_meta_decl_full_name(ecsact_decl_id id) {
