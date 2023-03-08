@@ -881,6 +881,16 @@ void ecsact_meta_get_dependencies(
 	}
 }
 
+void ecsact_add_dependency(
+	ecsact_package_id target,
+	ecsact_package_id dependency
+) {
+	auto& tgt_pkg_def = package_defs.at(target);
+	if(package_defs.contains(dependency)) {
+		tgt_pkg_def.dependencies.push_back(dependency);
+	}
+}
+
 const char* ecsact_meta_decl_full_name(ecsact_decl_id id) {
 	return full_names.at(id).c_str();
 }

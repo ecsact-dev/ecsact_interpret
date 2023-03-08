@@ -98,11 +98,29 @@ std::optional<T> find_by_statement(
 template<>
 std::optional<ecsact_component_id> find_by_name(
 	ecsact_package_id  package_id,
-	const std::string& name
+	const std::string& lookup_name
 ) {
+	auto pkg_name = ecsact::meta::package_name(package_id);
 	for(auto id : ecsact::meta::get_component_ids(package_id)) {
-		if(name == ecsact::meta::component_name(id)) {
+		auto comp_name = ecsact::meta::component_name(id);
+		if(lookup_name == comp_name) {
 			return id;
+		}
+
+		if(lookup_name == pkg_name + "." + comp_name) {
+			return id;
+		}
+	}
+
+	for(auto dep_pkg_id : ecsact::meta::get_dependencies(package_id)) {
+		auto dep_pkg_name = ecsact::meta::package_name(dep_pkg_id);
+
+		for(auto id : ecsact::meta::get_component_ids(dep_pkg_id)) {
+			auto comp_name = ecsact::meta::component_name(id);
+
+			if(lookup_name == dep_pkg_name + "." + comp_name) {
+				return id;
+			}
 		}
 	}
 
@@ -112,11 +130,29 @@ std::optional<ecsact_component_id> find_by_name(
 template<>
 std::optional<ecsact_transient_id> find_by_name(
 	ecsact_package_id  package_id,
-	const std::string& name
+	const std::string& lookup_name
 ) {
+	auto pkg_name = ecsact::meta::package_name(package_id);
 	for(auto id : ecsact::meta::get_transient_ids(package_id)) {
-		if(name == ecsact::meta::transient_name(id)) {
+		auto trans_name = ecsact::meta::transient_name(id);
+		if(lookup_name == trans_name) {
 			return id;
+		}
+
+		if(lookup_name == pkg_name + "." + trans_name) {
+			return id;
+		}
+	}
+
+	for(auto dep_pkg_id : ecsact::meta::get_dependencies(package_id)) {
+		auto dep_pkg_name = ecsact::meta::package_name(dep_pkg_id);
+
+		for(auto id : ecsact::meta::get_transient_ids(dep_pkg_id)) {
+			auto trans_name = ecsact::meta::transient_name(id);
+
+			if(lookup_name == dep_pkg_name + "." + trans_name) {
+				return id;
+			}
 		}
 	}
 
@@ -154,11 +190,29 @@ std::optional<ecsact_action_id> find_by_name(
 template<>
 std::optional<ecsact_enum_id> find_by_name(
 	ecsact_package_id  package_id,
-	const std::string& name
+	const std::string& lookup_name
 ) {
+	auto pkg_name = ecsact::meta::package_name(package_id);
 	for(auto id : ecsact::meta::get_enum_ids(package_id)) {
-		if(name == ecsact::meta::enum_name(id)) {
+		auto enum_name = ecsact::meta::enum_name(id);
+		if(lookup_name == enum_name) {
 			return id;
+		}
+
+		if(lookup_name == pkg_name + "." + enum_name) {
+			return id;
+		}
+	}
+
+	for(auto dep_pkg_id : ecsact::meta::get_dependencies(package_id)) {
+		auto dep_pkg_name = ecsact::meta::package_name(dep_pkg_id);
+
+		for(auto id : ecsact::meta::get_enum_ids(dep_pkg_id)) {
+			auto enum_name = ecsact::meta::enum_name(id);
+
+			if(lookup_name == dep_pkg_name + "." + enum_name) {
+				return id;
+			}
 		}
 	}
 
@@ -349,18 +403,16 @@ static ecsact_eval_error eval_import_statement(
 	std::span<const ecsact_statement>& context_stack,
 	const ecsact_statement&            statement
 ) {
-	auto&       data = statement.data.import_statement;
-	std::string import_name(
-		data.import_package_name.data,
-		data.import_package_name.length
-	);
+	auto& data = statement.data.import_statement;
+	auto  import_name =
+		std::string(data.import_package_name.data, data.import_package_name.length);
+
 	for(auto dep_pkg_id : ecsact::meta::get_package_ids()) {
 		if(dep_pkg_id == package_id) {
 			continue;
 		}
 		if(ecsact::meta::package_name(dep_pkg_id) == import_name) {
-			// TODO(zaucy): Import support
-			// ecsact_add_dependency(package_id, dep_pkg_id);
+			ecsact_add_dependency(package_id, dep_pkg_id);
 			return {};
 		}
 	}
