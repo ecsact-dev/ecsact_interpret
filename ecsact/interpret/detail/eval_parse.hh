@@ -4,6 +4,7 @@
 #include <array>
 #include <unordered_set>
 #include <cassert>
+#include <iostream> //  TODO(ZAUCY): Remove this
 #include "magic_enum.hpp"
 #include "ecsact/runtime/dynamic.h"
 #include "ecsact/runtime/meta.hh"
@@ -214,7 +215,7 @@ void parse_package_statements(
 ) {
 	auto source_index = 0;
 	for(auto& state : file_states) {
-		for(;;) {
+		while(state.reader.can_read_next()) {
 			state.reader.read_next();
 
 			if(ecsact_is_error_parse_status_code(state.reader.status.code)) {
@@ -225,6 +226,7 @@ void parse_package_statements(
 			auto& statement = state.reader.statements.top();
 
 			if(statement.type == ECSACT_STATEMENT_NONE) {
+				state.reader.pump_status_code();
 				continue;
 			}
 
@@ -260,13 +262,17 @@ void parse_imports(
 ) {
 	auto source_index = 0;
 	for(auto& state : file_states) {
-		for(;;) {
+		while(state.reader.can_read_next()) {
 			state.reader.read_next();
 
 			if(ecsact_is_error_parse_status_code(state.reader.status.code)) {
 				out_errors.push_back(to_parse_eval_error(source_index, state.reader));
 			} else {
 				ecsact_statement& statement = state.reader.statements.top();
+				if(statement.type == ECSACT_STATEMENT_NONE) {
+					state.reader.pump_status_code();
+					continue;
+				}
 				if(statement.type != ECSACT_STATEMENT_IMPORT) {
 					state.reader.pop_rewind();
 					break;
@@ -444,16 +450,22 @@ void parse_eval_declarations(
 }
 
 template<typename InputStream>
-std::vector<std::reference_wrapper<eval_parse_state<InputStream>>>
-get_sorted_states(std::vector<eval_parse_state<InputStream>>& file_states) {
-	std::vector<std::reference_wrapper<eval_parse_state<InputStream>>> result;
+inline auto get_sorted_states(
+	std::vector<eval_parse_state<InputStream>>& file_states
+) -> std::vector<std::reference_wrapper<eval_parse_state<InputStream>>> {
+	auto result =
+		std::vector<std::reference_wrapper<eval_parse_state<InputStream>>>{};
 	result.reserve(file_states.size());
 
-	std::unordered_set<std::string> resolved_packages;
+	auto resolved_packages = std::unordered_set<std::string>{};
 	resolved_packages.reserve(file_states.size());
 
 	while(resolved_packages.size() != file_states.size()) {
 		for(auto& state : file_states) {
+			if(resolved_packages.contains(state.package_name)) {
+				continue;
+			}
+
 			bool imports_resolved = true;
 			for(auto import_name : state.imports) {
 				if(!resolved_packages.contains(import_name)) {
@@ -465,6 +477,7 @@ get_sorted_states(std::vector<eval_parse_state<InputStream>>& file_states) {
 			if(imports_resolved) {
 				resolved_packages.insert(state.package_name);
 				result.push_back(std::ref(state));
+				break;
 			}
 		}
 	}

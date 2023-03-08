@@ -1,0 +1,15 @@
+main package multi.pkg;
+
+import multi.pkg.a;
+import multi.pkg.b;
+import multi.pkg.c;
+
+component FromMain;
+
+system FullyQualifiedFromMain {
+	include multi.pkg.FromMain;
+	include multi.pkg.a.FromA;
+	include multi.pkg.b.FromB;
+	include multi.pkg.c.FromC;
+}
+

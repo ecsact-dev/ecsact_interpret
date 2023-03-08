@@ -71,6 +71,7 @@ std::vector<parse_eval_error> ecsact::eval_files(std::vector<fs::path> files) {
 	auto source_index = 0;
 	for(auto& file_state_ref : sorted_file_states) {
 		auto& file_state = file_state_ref.get();
+
 		eval_imports(source_index, file_state, errors);
 		if(!errors.empty()) {
 			return errors;

@@ -22,12 +22,32 @@
 			"group": "build"
 		},
 		{
+			"label": "build //test:multi_pkg",
+			"command": "bazel",
+			"type": "shell",
+			"args": [
+				"build",
+				"//test:multi_pkg"
+			],
+			"group": "build"
+		},
+		{
 			"label": "build //test/errors:no_capabilities",
 			"command": "bazel",
 			"type": "shell",
 			"args": [
 				"build",
 				"//test/errors:no_capabilities"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build //test:comment_before_package",
+			"command": "bazel",
+			"type": "shell",
+			"args": [
+				"build",
+				"//test:comment_before_package"
 			],
 			"group": "build"
 		},

@@ -14,6 +14,24 @@
 			"preLaunchTask": "build //test:test",
 		},
 		{
+			"name": "test //test:multi_pkg",
+			"request": "launch",
+			"program": "${workspaceRoot}/bazel-bin/test/multi_pkg",
+			"cwd": "${workspaceFolder}",
+			"type": "lldb",
+			"windows": {
+				"type": "cppvsdbg",
+				"program": "${workspaceRoot}/bazel-bin/test/multi_pkg.exe"
+			},
+			"args": [
+				"--gtest_break_on_failure"
+			],
+			"preLaunchTask": "build //test:multi_pkg",
+			"sourceMap": {
+				"E:/.cache/bazel/output_base/execroot/ecsact_interpret": "${workspaceFolder}"
+			}
+		},
+		{
 			"name": "test //test/errors:no_capabilities",
 			"request": "launch",
 			"program": "${workspaceRoot}/bazel-bin/test/errors/no_capabilities",
@@ -24,6 +42,18 @@
 				"program": "${workspaceRoot}/bazel-bin/test/errors/no_capabilities.exe"
 			},
 			"preLaunchTask": "build //test/errors:no_capabilities",
+		},
+		{
+			"name": "test //test:comment_before_package",
+			"request": "launch",
+			"program": "${workspaceRoot}/bazel-bin/test/comment_before_package",
+			"cwd": "${workspaceFolder}",
+			"type": "lldb",
+			"windows": {
+				"type": "cppvsdbg",
+				"program": "${workspaceRoot}/bazel-bin/test/comment_before_package.exe"
+			},
+			"preLaunchTask": "build //test:comment_before_package",
 		},
 		{
 			"name": "run //cli:ecsact_interpreter",
