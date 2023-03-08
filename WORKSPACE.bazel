@@ -11,16 +11,16 @@ http_archive(
 
 http_archive(
     name = "ecsact_runtime",
-    sha256 = "219ce161deeb4865d3c190eac300dd257671e2b2ca0ec8752091506ccfa554a2",
-    strip_prefix = "ecsact_runtime-5cbf7257d7cbc42762d22e7604bc5bc0efb837fe",
-    url = "https://github.com/ecsact-dev/ecsact_runtime/archive/5cbf7257d7cbc42762d22e7604bc5bc0efb837fe.zip",
+    sha256 = "5778950a8db1cfcb798cab7617def259c8796b925d3c50e04c535fb883771e48",
+    strip_prefix = "ecsact_runtime-fa586aa536abf78b5d1e1ecda7adb9ccbfd5e39d",
+    url = "https://github.com/ecsact-dev/ecsact_runtime/archive/fa586aa536abf78b5d1e1ecda7adb9ccbfd5e39d.zip",
 )
 
 http_archive(
     name = "ecsact_parse",
-    sha256 = "87f634aa6d85b503e01c5f2ce98986c01c3f990b09aa86556c8928247323944b",
-    strip_prefix = "ecsact_parse-ef595017ec265aff1ef2d6020e673d3c80495f31",
-    url = "https://github.com/ecsact-dev/ecsact_parse/archive/ef595017ec265aff1ef2d6020e673d3c80495f31.zip",
+    sha256 = "f4a5e2f9bc163fecd125c4c8dd87977150999024ee5c6fdc75912424b3aa5501",
+    strip_prefix = "ecsact_parse-4e019a5697aa3992c3e9adcea5768f6df21d98a5",
+    url = "https://github.com/ecsact-dev/ecsact_parse/archive/4e019a5697aa3992c3e9adcea5768f6df21d98a5.zip",
 )
 
 load("@ecsact_parse//:repositories.bzl", "ecsact_parse_dependencies")
