@@ -16,6 +16,12 @@
 #include "./string_util.hh"
 #include "./read_util.hh"
 
+template<>
+struct magic_enum::customize::enum_range<ecsact_eval_error_code> {
+	static constexpr int min = 0;
+	static constexpr int max = 2000;
+};
+
 namespace ecsact::detail {
 
 constexpr std::array statement_ending_chars{';', '{', '}', '\n'};
@@ -189,7 +195,12 @@ parse_eval_error to_parse_eval_error(
 	std::string err_code_str;
 	switch(eval_err.code) {
 		default:
-			err_code_str = magic_enum::enum_name(eval_err.code).substr(16);
+			err_code_str = magic_enum::enum_name(eval_err.code);
+			if(!err_code_str.empty()) {
+				err_code_str = magic_enum::enum_name(eval_err.code).substr(16);
+			} else {
+				assert(false && "Magic Enum failed to get error name");
+			}
 			break;
 	}
 

@@ -4,6 +4,7 @@ load("//bazel:copts.bzl", "copts")
 _TESTS = [
     "no_capabilities",
     "no_package_statement_first",
+    "unknown_association_field",
 ]
 
 [cc_test(
@@ -11,6 +12,7 @@ _TESTS = [
     srcs = ["{}.cc".format(test)],
     copts = copts,
     data = ["{}.ecsact".format(test)],
+    args = ["--gtest_catch_exceptions=0"],
     deps = [
         "//test:test_lib",
         "@com_google_googletest//:gtest",

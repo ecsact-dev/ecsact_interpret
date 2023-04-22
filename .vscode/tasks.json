@@ -32,6 +32,16 @@
 			"group": "build"
 		},
 		{
+			"label": "build //test/extra:extra",
+			"command": "bazel",
+			"type": "shell",
+			"args": [
+				"build",
+				"//test/extra:extra"
+			],
+			"group": "build"
+		},
+		{
 			"label": "build //test/errors:no_capabilities",
 			"command": "bazel",
 			"type": "shell",
