@@ -57,14 +57,14 @@ typedef enum ecsact_eval_error_code {
 	/// File error codes only applies when parsing complete Ecsact files or
 	/// buffers. Individual evaluations do not have conceptual endings of
 	/// statements.
-	ECSACT_EVAL_BEGIN_ERR_FILE_ONLY = 10000,
+	ECSACT_EVAL_BEGIN_ERR_FILE_ONLY = 1000,
 
 	/// System or action has no capabilities.
 	ECSACT_EVAL_ERR_NO_CAPABILITIES,
 
 	/// Not an error code. End of file only errors.
 	/// SEE: ECSACT_EVAL_BEGIN_ERR_FILE_ONLY,
-	ECSACT_EVAL_END_ERR_FILE_ONLY = 20000,
+	ECSACT_EVAL_END_ERR_FILE_ONLY = 2000,
 } ecsact_eval_error_code;
 
 #endif // ECSACT_EVAL_ERROR_H
