@@ -8,6 +8,7 @@
 typedef struct ecsact_eval_error {
 	ecsact_eval_error_code code;
 	ecsact_statement_sv    relevant_content;
+	ecsact_statement_type  context_type;
 } ecsact_eval_error;
 
 ecsact_package_id ecsact_eval_package_statement(

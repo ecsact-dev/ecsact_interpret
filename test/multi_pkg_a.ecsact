@@ -1,4 +1,6 @@
 package multi.pkg.a;
 
-component FromA;
+component FromA {
+	i32 a;
+}
 

@@ -32,6 +32,24 @@
 			}
 		},
 		{
+			"name": "test //test/extra:extra",
+			"request": "launch",
+			"program": "${workspaceRoot}/bazel-bin/test/extra/extra",
+			"cwd": "${workspaceFolder}",
+			"type": "lldb",
+			"windows": {
+				"type": "cppvsdbg",
+				"program": "${workspaceRoot}/bazel-bin/test/extra/extra.exe"
+			},
+			"args": [
+				"--gtest_break_on_failure"
+			],
+			"preLaunchTask": "build //test/extra:extra",
+			"sourceMap": {
+				"E:/.cache/bazel/output_base/execroot/ecsact_interpret": "${workspaceFolder}"
+			}
+		},
+		{
 			"name": "test //test/errors:no_capabilities",
 			"request": "launch",
 			"program": "${workspaceRoot}/bazel-bin/test/errors/no_capabilities",

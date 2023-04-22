@@ -119,7 +119,7 @@ int main() {
 									<< ecsact::meta::package_name(*current_package)
 									<< COLOR_GREY " ]\n" COLOR_RESET;
 			} else if(last_statement.type == ECSACT_STATEMENT_UNKNOWN) {
-				std::string err_highlight;
+				auto err_highlight = std::string{};
 				err_highlight.reserve(last_source.size() + 3);
 				err_highlight += "   ";
 				for(auto c : last_source) {
