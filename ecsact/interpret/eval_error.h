@@ -53,6 +53,15 @@ typedef enum ecsact_eval_error_code {
 	/// The given field name was not found
 	ECSACT_EVAL_ERR_UNKNOWN_FIELD_NAME,
 
+	/// Statement does not support parameter with the given name
+	ECSACT_EVAL_ERR_UNKNOWN_PARAMETER_NAME,
+
+	/// Statement does not support any parameters yet parameters were given
+	ECSACT_EVAL_ERR_PARAMETERS_NOT_ALLOWED,
+
+	/// Internal error. Should not happen and is an indiciation of a bug.
+	ECSACT_EVAL_ERR_INTERNAL,
+
 	/// Not an error code. Start of file only errors.
 	/// File error codes only applies when parsing complete Ecsact files or
 	/// buffers. Individual evaluations do not have conceptual endings of

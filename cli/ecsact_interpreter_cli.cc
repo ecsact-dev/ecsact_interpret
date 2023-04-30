@@ -154,8 +154,13 @@ int main() {
 							<< std::string(offset + 3, ' ') << COLOR_RED "^" COLOR_RESET
 							<< " " << magic_enum::enum_name(eval_err.code).substr(16)
 							<< COLOR_GREY " (" << eval_err.code << ")" COLOR_RESET << "\n";
-					} else {
+					} else if(!err_content.empty()) {
 						std::cerr << err_content << "\n";
+					} else {
+						std::cerr //
+							<< COLOR_GREY " [ " COLOR_RED "error " COLOR_RESET
+							<< magic_enum::enum_name(eval_err.code).substr(16) << COLOR_GREY
+							<< " (" << eval_err.code << ") ]" COLOR_RESET "\n";
 					}
 
 					reader.pop_discard();
