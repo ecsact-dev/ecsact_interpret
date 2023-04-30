@@ -18,6 +18,16 @@
 #include "./detail/file_eval_error.hh"
 
 using namespace std::string_literals;
+using namespace std::string_view_literals;
+
+// variant overloaded visit trick
+// https://en.cppreference.com/w/cpp/utility/variant/visit
+template<class... Ts>
+struct overloaded : Ts... {
+	using Ts::operator()...;
+};
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 static auto expect_context(
 	std::span<const ecsact_statement>& context_stack,
@@ -57,6 +67,135 @@ static auto expect_context(
 			.context_type = context.type,
 		},
 	};
+}
+
+static auto view_statement_params( //
+	const ecsact_statement& statement
+) -> std::span<const ecsact_statement_parameter> {
+	return std::span{
+		statement.parameters,
+		static_cast<size_t>(statement.parameters_length),
+	};
+}
+
+template<typename T>
+static auto statement_param( //
+	const ecsact_statement& statement,
+	std::string_view        param_name
+) -> std::optional<T>;
+
+template<>
+auto statement_param<int32_t>( //
+	const ecsact_statement& statement,
+	std::string_view        param_name
+) -> std::optional<int32_t> {
+	auto result = std::optional<int32_t>{};
+	for(auto& param : view_statement_params(statement)) {
+		if(std::string_view{param.name.data, static_cast<size_t>(param.name.length)} != param_name) {
+			continue;
+		}
+
+		if(param.value.type != ECSACT_STATEMENT_PARAM_VALUE_TYPE_INTEGER) {
+			break;
+		}
+
+		result = param.value.data.integer_value;
+	}
+
+	return result;
+}
+
+template<>
+auto statement_param<bool>( //
+	const ecsact_statement& statement,
+	std::string_view        param_name
+) -> std::optional<bool> {
+	auto result = std::optional<bool>{};
+	for(auto& param : view_statement_params(statement)) {
+		if(std::string_view{param.name.data, static_cast<size_t>(param.name.length)} != param_name) {
+			continue;
+		}
+
+		if(param.value.type != ECSACT_STATEMENT_PARAM_VALUE_TYPE_BOOL) {
+			break;
+		}
+
+		result = param.value.data.bool_value;
+	}
+
+	return result;
+}
+
+template<typename FirstT, typename SecondT>
+auto statement_param( //
+	const ecsact_statement& statement,
+	std::string_view        param_name
+) -> std::optional<std::variant<FirstT, SecondT>> {
+	using result_variant_t = std::variant<FirstT, SecondT>;
+
+	{
+		auto first_result = statement_param<FirstT>(statement, param_name);
+		if(first_result) {
+			return result_variant_t{*first_result};
+		}
+	}
+
+	{
+		auto second_result = statement_param<SecondT>(statement, param_name);
+		if(second_result) {
+			return result_variant_t{*second_result};
+		}
+	}
+
+	return std::nullopt;
+}
+
+auto allow_statement_params( //
+	const ecsact_statement& statement,
+	const ecsact_statement* context,
+	auto&&                  allowed_param_names
+) -> std::optional<ecsact_eval_error> {
+	if(std::size(allowed_param_names) == 0 && statement.parameters_length > 0) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_PARAMETERS_NOT_ALLOWED,
+			.relevant_content = {},
+			.context_type = context ? context->type : ECSACT_STATEMENT_NONE,
+		};
+	}
+
+	for(auto& param : view_statement_params(statement)) {
+		auto param_name =
+			std::string_view{param.name.data, static_cast<size_t>(param.name.length)};
+		auto valid_param_name = false;
+
+		for(auto&& allowed_param_name : allowed_param_names) {
+			if(param_name == allowed_param_name) {
+				valid_param_name = true;
+				break;
+			}
+		}
+
+		if(!valid_param_name) {
+			return ecsact_eval_error{
+				.code = ECSACT_EVAL_ERR_UNKNOWN_PARAMETER_NAME,
+				.relevant_content = param.name,
+				.context_type = context ? context->type : ECSACT_STATEMENT_NONE,
+			};
+		}
+	}
+
+	return std::nullopt;
+}
+
+auto disallow_statement_params( //
+	const ecsact_statement& statement,
+	const ecsact_statement* context
+) -> std::optional<ecsact_eval_error> {
+	return allow_statement_params(
+		statement,
+		context,
+		std::array<std::string_view, 0>{}
+	);
 }
 
 std::optional<ecsact_field_id> find_field_by_name(
@@ -450,6 +589,10 @@ static ecsact_eval_error eval_import_statement(
 		return err;
 	}
 
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
+	}
+
 	auto import_name = std::string{
 		data.import_package_name.data,
 		static_cast<size_t>(data.import_package_name.length),
@@ -483,6 +626,10 @@ static ecsact_eval_error eval_component_statement(
 		return err;
 	}
 
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
+	}
+
 	auto name = std::string(data.component_name.data, data.component_name.length);
 
 	auto existing_decl = find_by_name<ecsact_decl_id>(package_id, name);
@@ -512,6 +659,10 @@ static ecsact_eval_error eval_transient_statement(
 	if(err.code != ECSACT_EVAL_OK) {
 		err.relevant_content = data.transient_name;
 		return err;
+	}
+
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
 	}
 
 	auto name = std::string(data.transient_name.data, data.transient_name.length);
@@ -553,6 +704,25 @@ static ecsact_eval_error eval_system_statement(
 		return err;
 	}
 
+	if(auto err = allow_statement_params(statement, context, std::array{"lazy"sv})) {
+		return *err;
+	}
+
+	auto lazy_value = [&]() -> int32_t {
+		auto lazy_param = statement_param<bool, int32_t>(statement, "lazy");
+		if(!lazy_param) {
+			return 0;
+		}
+
+		return std::visit(
+			overloaded{
+				[](bool bool_lazy) -> int32_t { return bool_lazy ? 1 : 0; },
+				[](int32_t int_lazy) -> int32_t { return int_lazy; },
+			},
+			*lazy_param
+		);
+	}();
+
 	if(context != nullptr) {
 		parent_sys_like_id =
 			find_by_statement<ecsact_system_like_id>(package_id, *context);
@@ -584,6 +754,10 @@ static ecsact_eval_error eval_system_statement(
 		ecsact_add_child_system(*parent_sys_like_id, sys_id);
 	}
 
+	if(lazy_value > 0) {
+		ecsact_set_system_lazy_iteration_rate(sys_id, lazy_value);
+	}
+
 	return {};
 }
 
@@ -597,6 +771,10 @@ static ecsact_eval_error eval_action_statement(
 	if(err.code != ECSACT_EVAL_OK) {
 		err.relevant_content = data.action_name;
 		return err;
+	}
+
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
 	}
 
 	auto name = std::string(data.action_name.data, data.action_name.length);
@@ -630,6 +808,10 @@ static ecsact_eval_error eval_enum_statement(
 		return err;
 	}
 
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
+	}
+
 	auto name = std::string(data.enum_name.data, data.enum_name.length);
 
 	auto existing_decl = find_by_name<ecsact_decl_id>(package_id, name);
@@ -655,6 +837,10 @@ static ecsact_eval_error eval_enum_value_statement(
 	if(err.code != ECSACT_EVAL_OK) {
 		err.relevant_content = data.name;
 		return err;
+	}
+
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
 	}
 
 	auto& context_data = context->data.enum_statement;
@@ -691,6 +877,10 @@ static ecsact_eval_error eval_builtin_type_field_statement(
 	if(err.code != ECSACT_EVAL_OK) {
 		err.relevant_content = data.field_name;
 		return err;
+	}
+
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
 	}
 
 	auto compo_id = find_by_statement<ecsact_composite_id>(package_id, *context);
@@ -733,12 +923,15 @@ static ecsact_eval_error eval_user_type_field_statement(
 	const ecsact_statement&            statement
 ) {
 	auto& data = statement.data.user_type_field_statement;
+	auto [context, err] = expect_context(context_stack, {ECSACT_STATEMENT_NONE});
 
-	if(context_stack.empty()) {
-		return ecsact_eval_error{
-			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
-			.relevant_content = {},
-		};
+	if(err.code != ECSACT_EVAL_OK) {
+		err.relevant_content = data.user_type_name;
+		return err;
+	}
+
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
 	}
 
 	auto compo_id =
@@ -800,26 +993,38 @@ static ecsact_eval_error eval_system_component_statement(
 	std::span<const ecsact_statement>& context_stack,
 	const ecsact_statement&            statement
 ) {
-	if(context_stack.empty()) {
-		return ecsact_eval_error{
-			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
-			.relevant_content = {},
-		};
+	auto [context, err] = expect_context(
+		context_stack,
+		{
+			ECSACT_STATEMENT_SYSTEM,
+			ECSACT_STATEMENT_ACTION,
+			ECSACT_STATEMENT_SYSTEM_COMPONENT,
+		}
+	);
+
+	if(err.code != ECSACT_EVAL_OK) {
+		err.relevant_content =
+			statement.data.system_component_statement.component_name;
+		return err;
+	}
+
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
 	}
 
 	std::optional<ecsact_system_like_id>    sys_like_id{};
 	std::optional<ecsact_component_like_id> assoc_comp{};
 	std::optional<ecsact_field_id>          assoc_comp_field{};
 
-	auto& context = context_stack.back();
-	switch(context.type) {
+	// See expect_context above for options here
+	switch(context->type) {
 		case ECSACT_STATEMENT_SYSTEM:
 		case ECSACT_STATEMENT_ACTION:
 			sys_like_id =
-				find_by_statement<ecsact_system_like_id>(package_id, context);
+				find_by_statement<ecsact_system_like_id>(package_id, *context);
 			break;
 		case ECSACT_STATEMENT_SYSTEM_COMPONENT: {
-			auto& data = context.data.system_component_statement;
+			auto& data = context->data.system_component_statement;
 
 			if(context_stack.size() < 2) {
 				return ecsact_eval_error{
@@ -970,11 +1175,20 @@ static ecsact_eval_error eval_system_generates_statement(
 	std::span<const ecsact_statement>& context_stack,
 	const ecsact_statement&            statement
 ) {
-	if(context_stack.empty()) {
-		return ecsact_eval_error{
-			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
-			.relevant_content = {},
-		};
+	auto [context, err] = expect_context(
+		context_stack,
+		{
+			ECSACT_STATEMENT_SYSTEM,
+			ECSACT_STATEMENT_ACTION,
+		}
+	);
+
+	if(err.code != ECSACT_EVAL_OK) {
+		return err;
+	}
+
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
 	}
 
 	auto sys_like_id =
@@ -1012,14 +1226,20 @@ static ecsact_eval_error eval_system_with_entity_statement(
 		};
 	}
 
-	auto& sys_comp_statement = context_stack.back();
-	if(sys_comp_statement.type != ECSACT_STATEMENT_SYSTEM_COMPONENT) {
-		return ecsact_eval_error{
-			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
-			.relevant_content = {},
-		};
+	auto [context, err] =
+		expect_context(context_stack, {ECSACT_STATEMENT_SYSTEM_COMPONENT});
+
+	if(err.code != ECSACT_EVAL_OK) {
+		err.relevant_content =
+			statement.data.system_with_entity_statement.with_entity_field_name;
+		return err;
 	}
 
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
+	}
+
+	auto& context_data = context->data.system_component_statement;
 	auto& sys_like_statement = context_stack[context_stack.size() - 2];
 	auto  sys_like_id =
 		find_by_statement<ecsact_system_like_id>(package_id, sys_like_statement);
@@ -1032,8 +1252,8 @@ static ecsact_eval_error eval_system_with_entity_statement(
 	}
 
 	auto comp_name = std::string(
-		sys_comp_statement.data.system_component_statement.component_name.data,
-		sys_comp_statement.data.system_component_statement.component_name.length
+		context_data.component_name.data,
+		context_data.component_name.length
 	);
 
 	auto comp_like_id =
@@ -1042,8 +1262,7 @@ static ecsact_eval_error eval_system_with_entity_statement(
 	if(!comp_like_id) {
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_UNKNOWN_COMPONENT_LIKE_TYPE,
-			.relevant_content =
-				sys_comp_statement.data.system_component_statement.component_name,
+			.relevant_content = context_data.component_name,
 		};
 	}
 
@@ -1096,6 +1315,10 @@ static ecsact_eval_error eval_entity_constraint_statement(
 			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 			.relevant_content = {},
 		};
+	}
+
+	if(auto err = disallow_statement_params(statement, &generates_statement)) {
+		return *err;
 	}
 
 	auto sys_like_id =
@@ -1165,87 +1388,106 @@ ecsact_eval_error ecsact_eval_statement(
 	auto&     statement = statement_stack[statement_stack_size - 1];
 	std::span context_statements(statement_stack, statement_stack_size - 1);
 
-	switch(statement.type) {
-		case ECSACT_STATEMENT_NONE:
-			return eval_none_statement(package_id, context_statements, statement);
-		case ECSACT_STATEMENT_UNKNOWN:
-			return eval_unknown_statement(package_id, context_statements, statement);
-		case ECSACT_STATEMENT_PACKAGE:
-			return ecsact_eval_error{
-				.code = ECSACT_EVAL_ERR_UNEXPECTED_STATEMENT,
-				.relevant_content = {},
-			};
-		case ECSACT_STATEMENT_IMPORT:
-			return eval_import_statement(package_id, context_statements, statement);
-		case ECSACT_STATEMENT_COMPONENT:
-			return eval_component_statement(
-				package_id,
-				context_statements,
-				statement
-			);
-		case ECSACT_STATEMENT_TRANSIENT:
-			return eval_transient_statement(
-				package_id,
-				context_statements,
-				statement
-			);
-		case ECSACT_STATEMENT_SYSTEM:
-			return eval_system_statement(package_id, context_statements, statement);
-		case ECSACT_STATEMENT_ACTION:
-			return eval_action_statement(package_id, context_statements, statement);
-		case ECSACT_STATEMENT_ENUM:
-			return eval_enum_statement(package_id, context_statements, statement);
-		case ECSACT_STATEMENT_ENUM_VALUE:
-			return eval_enum_value_statement(
-				package_id,
-				context_statements,
-				statement
-			);
-		case ECSACT_STATEMENT_BUILTIN_TYPE_FIELD:
-			return eval_builtin_type_field_statement(
-				package_id,
-				context_statements,
-				statement
-			);
-		case ECSACT_STATEMENT_USER_TYPE_FIELD:
-			return eval_user_type_field_statement(
-				package_id,
-				context_statements,
-				statement
-			);
-		case ECSACT_STATEMENT_ENTITY_FIELD:
-			return eval_entity_field_statement(
-				package_id,
-				context_statements,
-				statement
-			);
-		case ECSACT_STATEMENT_SYSTEM_COMPONENT:
-			return eval_system_component_statement(
-				package_id,
-				context_statements,
-				statement
-			);
-		case ECSACT_STATEMENT_SYSTEM_GENERATES:
-			return eval_system_generates_statement(
-				package_id,
-				context_statements,
-				statement
-			);
-		case ECSACT_STATEMENT_SYSTEM_WITH_ENTITY:
-			return eval_system_with_entity_statement(
-				package_id,
-				context_statements,
-				statement
-			);
-		case ECSACT_STATEMENT_ENTITY_CONSTRAINT:
-			return eval_entity_constraint_statement(
-				package_id,
-				context_statements,
-				statement
-			);
+	auto err = [&]() -> std::optional<ecsact_eval_error> {
+		switch(statement.type) {
+			case ECSACT_STATEMENT_NONE:
+				return eval_none_statement(package_id, context_statements, statement);
+			case ECSACT_STATEMENT_UNKNOWN:
+				return eval_unknown_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_PACKAGE:
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_UNEXPECTED_STATEMENT,
+					.relevant_content = {},
+				};
+			case ECSACT_STATEMENT_IMPORT:
+				return eval_import_statement(package_id, context_statements, statement);
+			case ECSACT_STATEMENT_COMPONENT:
+				return eval_component_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_TRANSIENT:
+				return eval_transient_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_SYSTEM:
+				return eval_system_statement(package_id, context_statements, statement);
+			case ECSACT_STATEMENT_ACTION:
+				return eval_action_statement(package_id, context_statements, statement);
+			case ECSACT_STATEMENT_ENUM:
+				return eval_enum_statement(package_id, context_statements, statement);
+			case ECSACT_STATEMENT_ENUM_VALUE:
+				return eval_enum_value_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_BUILTIN_TYPE_FIELD:
+				return eval_builtin_type_field_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_USER_TYPE_FIELD:
+				return eval_user_type_field_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_ENTITY_FIELD:
+				return eval_entity_field_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_SYSTEM_COMPONENT:
+				return eval_system_component_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_SYSTEM_GENERATES:
+				return eval_system_generates_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_SYSTEM_WITH_ENTITY:
+				return eval_system_with_entity_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_ENTITY_CONSTRAINT:
+				return eval_entity_constraint_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+		}
+
+		return std::nullopt;
+	}();
+
+	if(!err) {
+		assert(false && "Unhandled Statement Type");
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INTERNAL,
+			.relevant_content = {},
+			.context_type = context_statements.empty()
+				? ECSACT_STATEMENT_NONE
+				: context_statements.back().type,
+		};
 	}
 
-	throw std::runtime_error("Unhandled statement type");
+	return *err;
 }
 
 ecsact_package_id ecsact_eval_package_statement(

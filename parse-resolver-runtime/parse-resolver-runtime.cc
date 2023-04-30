@@ -70,6 +70,7 @@ struct action_def : composite, system_like {
 
 struct system_def : system_like {
 	std::string name;
+	int32_t     lazy_iteration_rate = 0;
 };
 
 struct enum_value {
@@ -1139,4 +1140,19 @@ void ecsact_meta_system_association_capabilities(
 			*out_capabilities_count = 0;
 		}
 	}
+}
+
+void ecsact_set_system_lazy_iteration_rate( //
+	ecsact_system_id system_id,
+	int32_t          iteration_rate
+) {
+	auto& def = sys_defs.at(system_id);
+	def.lazy_iteration_rate = iteration_rate;
+}
+
+int32_t ecsact_meta_get_lazy_iteration_rate( //
+	ecsact_system_id system_id
+) {
+	auto& def = sys_defs.at(system_id);
+	return def.lazy_iteration_rate;
 }
