@@ -10,6 +10,7 @@
 #include <optional>
 #include <stdexcept>
 #include <span>
+#include <variant>
 #include "magic_enum.hpp"
 #include "ecsact/parse.h"
 #include "ecsact/runtime/dynamic.h"
