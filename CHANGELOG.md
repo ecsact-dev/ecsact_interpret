@@ -2,6 +2,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.0 - 2023-06-07
+#### Features
+- parallel execution parameter for system-likes (#176) - (f3ae491) - Ezekiel Warren
+#### Miscellaneous Chores
+- **(deps)** update com_grail_bazel_toolchain digest to ceeedcc (#174) - (1e0cc52) - renovate[bot]
+- **(deps)** update com_grail_bazel_toolchain digest to b397ad2 (#173) - (ace3870) - renovate[bot]
+- **(deps)** update com_grail_bazel_toolchain digest to 41ff2a0 (#172) - (936d365) - renovate[bot]
+- **(deps)** update hedron_compile_commands digest to 3dddf20 (#171) - (e993072) - renovate[bot]
+- **(deps)** update hedron_compile_commands digest to 80ac7ef (#170) - (17a69cc) - renovate[bot]
+
+- - -
+
 ## 0.2.1 - 2023-05-01
 #### Bug Fixes
 - missing variant include - (92b988b) - Ezekiel Warren
