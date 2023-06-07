@@ -1161,7 +1161,7 @@ int32_t ecsact_meta_get_lazy_iteration_rate( //
 
 void ecsact_set_system_parallel_execution( //
 	ecsact_system_like_id system_like_id,
-	int32_t               parallel_execution
+	bool                  parallel_execution
 ) {
 	auto& def = get_system_like(system_like_id);
 	def.parallel_execution = parallel_execution;
