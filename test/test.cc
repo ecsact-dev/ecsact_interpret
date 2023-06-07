@@ -156,6 +156,10 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 				 ecsact_id_cast<ecsact_component_like_id>(comp_id)
 			 );
 			 ASSERT_EQ(sys_caps[0], ECSACT_SYS_CAP_READWRITE);
+
+			 ASSERT_TRUE(ecsact_meta_get_system_parallel_execution(
+				 ecsact_id_cast<ecsact_system_like_id>(sys_id)
+			 ));
 		 }},
 	};
 

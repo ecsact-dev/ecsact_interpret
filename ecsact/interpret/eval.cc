@@ -705,7 +705,7 @@ static ecsact_eval_error eval_system_statement(
 		return err;
 	}
 
-	if(auto err = allow_statement_params(statement, context, std::array{"lazy"sv})) {
+	if(auto err = allow_statement_params(statement, context, std::array{"lazy"sv, "parallel"sv})) {
 		return *err;
 	}
 
@@ -759,6 +759,12 @@ static ecsact_eval_error eval_system_statement(
 		ecsact_set_system_lazy_iteration_rate(sys_id, lazy_value);
 	}
 
+	auto parallel = statement_param<bool>(statement, "parallel").value_or(false);
+	ecsact_set_system_parallel_execution(
+		ecsact_id_cast<ecsact_system_like_id>(sys_id),
+		parallel
+	);
+
 	return {};
 }
 
@@ -774,7 +780,7 @@ static ecsact_eval_error eval_action_statement(
 		return err;
 	}
 
-	if(auto err = disallow_statement_params(statement, context)) {
+	if(auto err = allow_statement_params(statement, context, std::array{"parallel"sv})) {
 		return *err;
 	}
 
@@ -788,10 +794,16 @@ static ecsact_eval_error eval_action_statement(
 		};
 	}
 
-	ecsact_create_action(
+	auto act_id = ecsact_create_action(
 		package_id,
 		data.action_name.data,
 		data.action_name.length
+	);
+
+	auto parallel = statement_param<bool>(statement, "parallel").value_or(false);
+	ecsact_set_system_parallel_execution(
+		ecsact_id_cast<ecsact_system_like_id>(act_id),
+		parallel
 	);
 
 	return {};
