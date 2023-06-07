@@ -759,6 +759,12 @@ static ecsact_eval_error eval_system_statement(
 		ecsact_set_system_lazy_iteration_rate(sys_id, lazy_value);
 	}
 
+	auto parallel = statement_param<bool>(statement, "parallel").value_or(false);
+	ecsact_set_system_parallel_execution(
+		ecsact_id_cast<ecsact_system_like_id>(sys_id),
+		parallel
+	);
+
 	return {};
 }
 

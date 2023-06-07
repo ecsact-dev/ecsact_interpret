@@ -62,6 +62,8 @@ struct system_like {
 
 	/** in execution order */
 	std::vector<ecsact_system_id> nested_systems;
+
+	bool parallel_execution = false;
 };
 
 struct action_def : composite, system_like {
@@ -1155,4 +1157,19 @@ int32_t ecsact_meta_get_lazy_iteration_rate( //
 ) {
 	auto& def = sys_defs.at(system_id);
 	return def.lazy_iteration_rate;
+}
+
+void ecsact_set_system_parallel_execution( //
+	ecsact_system_like_id system_like_id,
+	int32_t               parallel_execution
+) {
+	auto& def = get_system_like(system_like_id);
+	def.parallel_execution = parallel_execution;
+}
+
+bool ecsact_meta_get_system_parallel_execution( //
+	ecsact_system_like_id system_like_id
+) {
+	auto& def = get_system_like(system_like_id);
+	return def.parallel_execution;
 }
