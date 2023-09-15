@@ -45,7 +45,7 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 	auto runfiles = bazel_sundry::CreateDefaultRunfiles();
 	ASSERT_TRUE(runfiles);
 
-	auto test_ecsact = runfiles->Rlocation("ecsact_interpret/test/test.ecsact");
+	auto test_ecsact = runfiles->Rlocation("ecsact_interpret_test/test.ecsact");
 	ASSERT_FALSE(test_ecsact.empty());
 	ASSERT_TRUE(fs::exists(test_ecsact));
 

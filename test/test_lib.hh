@@ -16,7 +16,7 @@ auto ecsact_interpret_test_files(std::vector<std::string> relative_file_paths)
 	file_paths.reserve(relative_file_paths.size());
 
 	for(auto rel_p : relative_file_paths) {
-		auto path_rloc = "ecsact_interpret/test/" + rel_p;
+		auto path_rloc = "ecsact_interpret_test/" + rel_p;
 		auto path = runfiles->Rlocation(path_rloc);
 		[&] {
 			ASSERT_FALSE(path.empty()) << "couldn't find: " << path_rloc << "\n";

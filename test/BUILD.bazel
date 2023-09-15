@@ -1,14 +1,14 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
-load("//bazel:copts.bzl", "copts")
+load("@ecsact_interpret//bazel:copts.bzl", "copts")
 
 cc_library(
     name = "test_lib",
     hdrs = ["test_lib.hh"],
-    visibility = ["//test:__subpackages__"],
+    visibility = ["//:__subpackages__"],
     deps = [
-        "//:ecsact_interpret",
+        "@ecsact_interpret",
         "@bazel_sundry//bazel_sundry:runfiles",
-        "@com_google_googletest//:gtest",
+        "@googletest//:gtest",
     ],
 )
 
@@ -18,10 +18,10 @@ cc_test(
     copts = copts,
     data = ["test.ecsact"],
     deps = [
-        "//:ecsact_interpret",
+        "@ecsact_interpret",
         "@bazel_sundry//bazel_sundry:runfiles",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -32,10 +32,10 @@ cc_test(
     data = ["comment_before_package.ecsact"],
     deps = [
         ":test_lib",
-        "//:ecsact_interpret",
+        "@ecsact_interpret",
         "@bazel_sundry//bazel_sundry:runfiles",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -51,9 +51,9 @@ cc_test(
     ],
     deps = [
         ":test_lib",
-        "//:ecsact_interpret",
+        "@ecsact_interpret",
         "@bazel_sundry//bazel_sundry:runfiles",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
