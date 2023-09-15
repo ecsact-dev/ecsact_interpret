@@ -1,0 +1,18 @@
+module(name = "ecsact_interpret_test")
+
+bazel_dep(name = "rules_cc", version = "0.0.8")
+bazel_dep(name = "bazel_skylib", version = "1.4.2")
+bazel_dep(name = "googletest", version = "1.14.0")
+bazel_dep(name = "bazel_sundry")
+bazel_dep(name = "ecsact_interpret")
+
+git_override(
+    module_name = "bazel_sundry",
+    commit = "a999751b4992fab12a06f1bede2414708c6db540",
+    remote = "https://github.com/seaube/bazel_sundry",
+)
+
+local_path_override(
+    module_name = "ecsact_interpret",
+    path = "..",
+)

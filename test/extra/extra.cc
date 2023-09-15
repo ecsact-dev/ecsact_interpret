@@ -2,7 +2,7 @@
 #include "ecsact/interpret/eval.h"
 #include "ecsact/runtime/meta.hh"
 
-#include "test/test_lib.hh"
+#include "test_lib.hh"
 
 TEST(MultiPkgTest, NoErrors) {
 	auto errs = ecsact_interpret_test_files({

@@ -2,7 +2,7 @@
 #include "gtest/gtest.h"
 #include "ecsact/interpret/eval.h"
 
-#include "test/test_lib.hh"
+#include "test_lib.hh"
 
 TEST(NoPackageStatementFirst, NoPackageStatementFirst) {
 	auto errs = ecsact_interpret_test_files({"comment_before_package.ecsact"});

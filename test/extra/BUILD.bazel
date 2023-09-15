@@ -1,5 +1,5 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
-load("//bazel:copts.bzl", "copts")
+load("@ecsact_interpret//bazel:copts.bzl", "copts")
 
 cc_test(
     name = "extra",
@@ -10,10 +10,10 @@ cc_test(
         "imported_pkg.ecsact",
     ],
     deps = [
-        "//test:test_lib",
-        "//:ecsact_interpret",
+        "//:test_lib",
+        "@ecsact_interpret",
         "@bazel_sundry//bazel_sundry:runfiles",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )

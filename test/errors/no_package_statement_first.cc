@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include "ecsact/interpret/eval.h"
 
-#include "test/test_lib.hh"
+#include "test_lib.hh"
 
 TEST(NoPackageStatementFirst, NoPackageStatementFirst) {
 	auto errs =
