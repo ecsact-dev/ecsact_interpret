@@ -2,6 +2,22 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.0 - 2023-09-15
+#### Features
+- bzlmodify (#188) - (886cd6e) - Ezekiel Warren
+#### Miscellaneous Chores
+- **(deps)** update com_grail_bazel_toolchain digest to e4fad4e (#187) - (65bf277) - renovate[bot]
+- **(deps)** update com_grail_bazel_toolchain digest to c217c03 (#186) - (c6534d7) - renovate[bot]
+- **(deps)** update com_grail_bazel_toolchain digest to 9d8cc8a (#183) - (52a0d23) - renovate[bot]
+- **(deps)** update com_grail_bazel_toolchain digest to 5bbef8c (#182) - (f6fb44a) - renovate[bot]
+- **(deps)** update hedron_compile_commands digest to e160627 (#180) - (2b4962c) - renovate[bot]
+- **(deps)** update hedron_compile_commands digest to ecafb96 (#179) - (095aacc) - renovate[bot]
+- **(deps)** update hedron_compile_commands digest to aaa2fda (#178) - (6fb67b3) - renovate[bot]
+- **(deps)** update bazel c++ tooling repositories (#177) - (f2f50e9) - renovate[bot]
+- update cog.toml - (1349e7e) - Ezekiel Warren
+
+- - -
+
 ## 0.3.0 - 2023-06-07
 #### Features
 - parallel execution parameter for system-likes (#176) - (f3ae491) - Ezekiel Warren
