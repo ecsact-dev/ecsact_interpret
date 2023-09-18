@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.5.0 - 2023-09-18
+#### Miscellaneous Chores
+- **(deps)** update ecsact deps (#190) - (ab29199) - Ezekiel Warren
+- **(deps)** update com_grail_bazel_toolchain digest to edc058a (#189) - (8197eec) - renovate[bot]
+
+- - -
+
 ## 0.4.0 - 2023-09-15
 #### Features
 - bzlmodify (#188) - (886cd6e) - Ezekiel Warren
