@@ -1,6 +1,3 @@
-# This file is maintained by ecsact-dev/ecsact_common
-# If changes are required please make them there
-
 startup --windows_enable_symlinks
 common --enable_bzlmod
 common --registry=https://raw.githubusercontent.com/ecsact-dev/bazel_registry/main
