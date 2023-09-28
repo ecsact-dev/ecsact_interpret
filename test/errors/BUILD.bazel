@@ -1,11 +1,13 @@
 load("@rules_cc//cc:defs.bzl", "cc_test")
 load("@ecsact_interpret//bazel:copts.bzl", "copts")
 
+# buildifier: keep sorted
 _TESTS = [
     "invalid_notify_settings",
     "no_capabilities",
     "no_package_statement_first",
     "unknown_association_field",
+    "unknown_component_notify_settings",
 ]
 
 [cc_test(
