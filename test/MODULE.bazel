@@ -12,6 +12,19 @@ git_override(
     remote = "https://github.com/seaube/bazel_sundry",
 )
 
+git_override(
+    module_name = "ecsact_parse",
+    commit = "4ade8b03b049bc72ffd080658e20fa95625d62ce",
+    remote = "https://github.com/ecsact-dev/ecsact_parse",
+)
+
+# TODO: https://github.com/ecsact-dev/ecsact_runtime/pull/202
+git_override(
+    module_name = "ecsact_runtime",
+    commit = "4898df11566551ee48c9bf31d3c4471a12795091",
+    remote = "https://github.com/ecsact-dev/ecsact_runtime",
+)
+
 local_path_override(
     module_name = "ecsact_interpret",
     path = "..",

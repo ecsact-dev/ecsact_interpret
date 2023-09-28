@@ -1308,6 +1308,113 @@ static ecsact_eval_error eval_system_with_entity_statement(
 	return {};
 }
 
+static auto get_notify_setting_from_string( //
+	std::string_view setting_name
+) -> std::optional<ecsact_system_notify_setting> {
+	static const auto notify_setting_name_map =
+		std::unordered_map<std::string_view, ecsact_system_notify_setting>{
+			{"always"sv, ECSACT_SYS_NOTIFY_ALWAYS},
+			{"oninit"sv, ECSACT_SYS_NOTIFY_ONINIT},
+			{"onupdate"sv, ECSACT_SYS_NOTIFY_ONUPDATE},
+			{"onchange"sv, ECSACT_SYS_NOTIFY_ONCHANGE},
+			{"onremove"sv, ECSACT_SYS_NOTIFY_ONREMOVE},
+		};
+
+	auto itr = notify_setting_name_map.find(setting_name);
+	if(itr != notify_setting_name_map.end()) {
+		return itr->second;
+	}
+
+	return std::nullopt;
+}
+
+static auto eval_system_notify_statement(
+	ecsact_package_id                  package_id,
+	std::span<const ecsact_statement>& context_stack,
+	const ecsact_statement&            statement
+) -> ecsact_eval_error {
+	auto [context, err] = expect_context(
+		context_stack,
+		{
+			ECSACT_STATEMENT_SYSTEM,
+			ECSACT_STATEMENT_ACTION,
+		}
+	);
+
+	if(err.code != ECSACT_EVAL_OK) {
+		return err;
+	}
+
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
+	}
+
+	auto sys_like_id = find_by_statement<ecsact_system_like_id>( //
+		package_id,
+		*context
+	);
+
+	auto data = statement.data.system_notify_component_statement;
+
+	auto comp_like_name = std::string( //
+		data.component_name.data,
+		data.component_name.length
+	);
+
+	auto comp_like_id = find_by_name<ecsact_component_like_id>( //
+		package_id,
+		comp_like_name
+	);
+
+	if(!comp_like_id) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_UNKNOWN_COMPONENT_LIKE_TYPE,
+			.relevant_content = data.component_name,
+		};
+	}
+
+	auto setting_name = std::string_view( //
+		data.setting_name.data,
+		data.setting_name.length
+	);
+
+	auto notify_setting = get_notify_setting_from_string(setting_name);
+
+	if(!notify_setting) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_NOTIFY_SETTING,
+			.relevant_content = data.setting_name,
+		};
+	}
+
+	ecsact_set_system_notify_setting(
+		*sys_like_id,
+		*comp_like_id,
+		*notify_setting
+	);
+
+	return {};
+}
+
+static auto eval_system_notify_component_statement(
+	ecsact_package_id                  package_id,
+	std::span<const ecsact_statement>& context_stack,
+	const ecsact_statement&            statement
+) -> ecsact_eval_error {
+	auto [context, err] =
+		expect_context(context_stack, {ECSACT_STATEMENT_SYSTEM_NOTIFY});
+
+	if(err.code != ECSACT_EVAL_OK) {
+		return err;
+	}
+
+	if(auto err = disallow_statement_params(statement, context)) {
+		return *err;
+	}
+
+	return {};
+}
+
 static ecsact_eval_error eval_entity_constraint_statement(
 	ecsact_package_id                  package_id,
 	std::span<const ecsact_statement>& context_stack,
@@ -1480,6 +1587,18 @@ ecsact_eval_error ecsact_eval_statement(
 				);
 			case ECSACT_STATEMENT_ENTITY_CONSTRAINT:
 				return eval_entity_constraint_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_SYSTEM_NOTIFY:
+				return eval_system_notify_statement(
+					package_id,
+					context_statements,
+					statement
+				);
+			case ECSACT_STATEMENT_SYSTEM_NOTIFY_COMPONENT:
+				return eval_system_notify_component_statement(
 					package_id,
 					context_statements,
 					statement

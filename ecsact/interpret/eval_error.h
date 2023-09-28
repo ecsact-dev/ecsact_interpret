@@ -59,6 +59,9 @@ typedef enum ecsact_eval_error_code {
 	/// Statement does not support any parameters yet parameters were given
 	ECSACT_EVAL_ERR_PARAMETERS_NOT_ALLOWED,
 
+	/// Notify setting provided is invalid
+	ECSACT_EVAL_ERR_INVALID_NOTIFY_SETTING,
+
 	/// Internal error. Should not happen and is an indiciation of a bug.
 	ECSACT_EVAL_ERR_INTERNAL,
 
