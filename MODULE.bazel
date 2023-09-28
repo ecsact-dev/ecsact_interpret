@@ -19,6 +19,6 @@ git_override(
 # TODO: https://github.com/ecsact-dev/ecsact_runtime/pull/202
 git_override(
     module_name = "ecsact_runtime",
-    commit = "4898df11566551ee48c9bf31d3c4471a12795091",
+    commit = "9067827b8bce245dd64220310c6a8080ad3481b0",
     remote = "https://github.com/ecsact-dev/ecsact_runtime",
 )

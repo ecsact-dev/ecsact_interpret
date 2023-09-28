@@ -1387,7 +1387,7 @@ static auto eval_system_notify_statement(
 		};
 	}
 
-	ecsact_set_system_notify_setting(
+	ecsact_set_system_notify_component_setting(
 		*sys_like_id,
 		*comp_like_id,
 		*notify_setting
