@@ -32,7 +32,7 @@ ecsact_eval_error ecsact_eval_statement(
 );
 
 /**
- * Clears memory of all previous successfully evaluated statements.
+ * @deprecated
  */
 void ecsact_eval_reset();
 

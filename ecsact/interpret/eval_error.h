@@ -62,8 +62,18 @@ typedef enum ecsact_eval_error_code {
 	/// Notify setting provided is invalid
 	ECSACT_EVAL_ERR_INVALID_NOTIFY_SETTING,
 
+	/// More than 1 notify statements were found. Only 1 is permitted per system.
+	ECSACT_EVAL_ERR_MULTIPLE_NOTIFY_STATEMENTS,
+
+	/// Notify block setting and component settings were found. Only one or the
+	/// other is permitted.
+	ECSACT_EVAL_ERR_NOTIFY_BLOCK_AND_COMPONENTS,
+
+	/// The notify statement must be after all capability statements.
+	ECSACT_EVAL_ERR_NOTIFY_BEFORE_SYSTEM_COMPONENT,
+
 	/// Internal error. Should not happen and is an indiciation of a bug.
-	ECSACT_EVAL_ERR_INTERNAL,
+	ECSACT_EVAL_ERR_INTERNAL = 999,
 
 	/// Not an error code. Start of file only errors.
 	/// File error codes only applies when parsing complete Ecsact files or
