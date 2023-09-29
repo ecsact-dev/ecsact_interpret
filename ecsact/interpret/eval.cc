@@ -1409,7 +1409,7 @@ static auto eval_system_notify_component_statement(
 			.relevant_content = {},
 		};
 	}
-	
+
 	auto [context, err] =
 		expect_context(context_stack, {ECSACT_STATEMENT_SYSTEM_NOTIFY});
 
