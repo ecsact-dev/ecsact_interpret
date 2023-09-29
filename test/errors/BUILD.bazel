@@ -3,6 +3,7 @@ load("@ecsact_interpret//bazel:copts.bzl", "copts")
 
 # buildifier: keep sorted
 _TESTS = [
+    "duplicate_notice_components",
     "invalid_notify_settings",
     "no_capabilities",
     "no_package_statement_first",

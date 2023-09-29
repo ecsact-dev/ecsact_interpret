@@ -15,6 +15,7 @@
 #include "ecsact/parse.h"
 #include "ecsact/runtime/dynamic.h"
 #include "ecsact/runtime/meta.hh"
+#include "ecsact/runtime/meta.h"
 
 #include "./detail/file_eval_error.hh"
 
@@ -1402,6 +1403,13 @@ static auto eval_system_notify_component_statement(
 	std::span<const ecsact_statement>& context_stack,
 	const ecsact_statement&            statement
 ) -> ecsact_eval_error {
+	if(context_stack.size() < 2) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+			.relevant_content = {},
+		};
+	}
+	
 	auto [context, err] =
 		expect_context(context_stack, {ECSACT_STATEMENT_SYSTEM_NOTIFY});
 
@@ -1430,7 +1438,7 @@ static auto eval_system_notify_component_statement(
 
 	auto sys_like_id = find_by_statement<ecsact_system_like_id>( //
 		package_id,
-		*context
+		context_stack[context_stack.size() - 2]
 	);
 
 	auto comp_like_name = std::string( //
@@ -1462,6 +1470,16 @@ static auto eval_system_notify_component_statement(
 			.code = ECSACT_EVAL_ERR_INVALID_NOTIFY_SETTING,
 			.relevant_content = data.setting_name,
 		};
+	}
+
+	for(auto&& [existing_comp_id, _] :
+			ecsact::meta::system_notify_settings(*sys_like_id)) {
+		if(existing_comp_id == *comp_like_id) {
+			return ecsact_eval_error{
+				.code = ECSACT_EVAL_ERR_DUPLICATE_NOTIFY_COMPONENT,
+				.relevant_content = {},
+			};
+		}
 	}
 
 	ecsact_set_system_notify_component_setting(

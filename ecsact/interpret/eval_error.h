@@ -72,6 +72,9 @@ typedef enum ecsact_eval_error_code {
 	/// The notify statement must be after all capability statements.
 	ECSACT_EVAL_ERR_NOTIFY_BEFORE_SYSTEM_COMPONENT,
 
+	// More than one system notify component statement for the same component.
+	ECSACT_EVAL_ERR_DUPLICATE_NOTIFY_COMPONENT,
+
 	/// Internal error. Should not happen and is an indiciation of a bug.
 	ECSACT_EVAL_ERR_INTERNAL = 999,
 
