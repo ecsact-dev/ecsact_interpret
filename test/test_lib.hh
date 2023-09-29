@@ -7,8 +7,9 @@
 #include "ecsact/interpret/eval.hh"
 #include "bazel_sundry/runfiles.hh"
 
-auto ecsact_interpret_test_files(std::vector<std::string> relative_file_paths)
-	-> std::vector<ecsact::parse_eval_error> {
+inline auto ecsact_interpret_test_files(
+	std::vector<std::string> relative_file_paths
+) -> std::vector<ecsact::parse_eval_error> {
 	auto runfiles = bazel_sundry::CreateDefaultRunfiles();
 	[&] { ASSERT_TRUE(runfiles); }();
 

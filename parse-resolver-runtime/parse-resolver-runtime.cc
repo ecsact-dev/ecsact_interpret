@@ -53,11 +53,21 @@ struct system_like {
 		ecsact_system_generate flag;
 	};
 
-	std::unordered_map<ecsact_component_like_id, cap_entry> caps;
+	using caps_t = std::unordered_map< //
+		ecsact_component_like_id,
+		cap_entry>;
+	caps_t caps;
+
 	using generates_t = std::unordered_map<
 		ecsact_system_generates_id,
 		std::unordered_map<ecsact_component_id, ecsact_system_generate>>;
-	generates_t           generates;
+	generates_t generates;
+
+	using notify_settings_t = std::unordered_map< //
+		ecsact_component_like_id,
+		ecsact_system_notify_setting>;
+	notify_settings_t notify_settings;
+
 	ecsact_system_like_id parent_system_id = (ecsact_system_like_id)-1;
 
 	/** in execution order */
@@ -1172,4 +1182,50 @@ bool ecsact_meta_get_system_parallel_execution( //
 ) {
 	auto& def = get_system_like(system_like_id);
 	return def.parallel_execution;
+}
+
+auto ecsact_meta_system_notify_settings_count(
+	ecsact_system_like_id system_like_id
+) -> int32_t {
+	auto& def = get_system_like(system_like_id);
+	return static_cast<int32_t>(def.notify_settings.size());
+}
+
+auto ecsact_meta_system_notify_settings(
+	ecsact_system_like_id         system_like_id,
+	int32_t                       max_notifies_count,
+	ecsact_component_like_id*     out_notify_component_ids,
+	ecsact_system_notify_setting* out_notify_settings,
+	int32_t*                      out_notifies_count
+) -> void {
+	auto& def = get_system_like(system_like_id);
+
+	auto itr = def.notify_settings.begin();
+	for(int i = 0; max_notifies_count > i; ++i) {
+		if(i >= def.notify_settings.size() || itr == def.notify_settings.end()) {
+			break;
+		}
+
+		out_notify_component_ids[i] = itr->first;
+		out_notify_settings[i] = itr->second;
+
+		++itr;
+	}
+
+	if(out_notifies_count != nullptr) {
+		*out_notifies_count = static_cast<int32_t>(def.notify_settings.size());
+	}
+}
+
+auto ecsact_set_system_notify_component_setting(
+	ecsact_system_like_id        system_like_id,
+	ecsact_component_like_id     component_like_id,
+	ecsact_system_notify_setting setting
+) -> void {
+	auto& def = get_system_like(system_like_id);
+	if(setting == ECSACT_SYS_NOTIFY_NONE) {
+		def.notify_settings.erase(component_like_id);
+	} else {
+		def.notify_settings[component_like_id] = setting;
+	}
 }
