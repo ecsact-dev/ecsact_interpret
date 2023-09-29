@@ -7,18 +7,5 @@ module(
 bazel_dep(name = "rules_cc", version = "0.0.8")
 bazel_dep(name = "bazel_skylib", version = "1.4.2")
 bazel_dep(name = "magic_enum", version = "0.9.3")
-bazel_dep(name = "ecsact_runtime", version = "0.5.1")
-bazel_dep(name = "ecsact_parse", version = "0.3.0")
-
-git_override(
-    module_name = "ecsact_parse",
-    commit = "4ade8b03b049bc72ffd080658e20fa95625d62ce",
-    remote = "https://github.com/ecsact-dev/ecsact_parse",
-)
-
-# TODO: https://github.com/ecsact-dev/ecsact_runtime/pull/202
-git_override(
-    module_name = "ecsact_runtime",
-    commit = "9067827b8bce245dd64220310c6a8080ad3481b0",
-    remote = "https://github.com/ecsact-dev/ecsact_runtime",
-)
+bazel_dep(name = "ecsact_runtime", version = "0.5.2")
+bazel_dep(name = "ecsact_parse", version = "0.3.3")
