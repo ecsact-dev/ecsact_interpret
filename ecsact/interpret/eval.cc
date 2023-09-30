@@ -487,12 +487,13 @@ auto find_field_by_full_name(
 
 	return ecsact_field_type{
 		.kind = ECSACT_TYPE_KIND_FIELD_INDEX,
-		.type = {
+		.type{
 			.field_index{
 				.composite_id = *composite_id,
 				.field_id = *field_id,
 			},
-		}};
+		},
+	};
 }
 
 template<>
