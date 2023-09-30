@@ -9,3 +9,9 @@ bazel_dep(name = "bazel_skylib", version = "1.4.2")
 bazel_dep(name = "magic_enum", version = "0.9.3")
 bazel_dep(name = "ecsact_runtime", version = "0.5.3")
 bazel_dep(name = "ecsact_parse", version = "0.3.3")
+
+git_override(
+    module_name = "ecsact_runtime",
+    commit = "96f82ffd6e8ab31c64d71eedd832d8f85a33961d",
+    remote = "https://github.com/ecsact-dev/ecsact_runtime",
+)

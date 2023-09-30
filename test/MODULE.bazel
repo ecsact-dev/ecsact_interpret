@@ -19,3 +19,9 @@ local_path_override(
     module_name = "ecsact_interpret",
     path = "..",
 )
+
+git_override(
+    module_name = "ecsact_runtime",
+    commit = "96f82ffd6e8ab31c64d71eedd832d8f85a33961d",
+    remote = "https://github.com/ecsact-dev/ecsact_runtime",
+)

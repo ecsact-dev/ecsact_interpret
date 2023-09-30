@@ -460,6 +460,41 @@ std::optional<ecsact_component_like_id> find_by_name(
 	return {};
 }
 
+auto find_field_by_full_name(
+	ecsact_package_id package_id,
+	std::string_view  field_full_name
+) -> std::optional<ecsact_field_type> {
+	auto last_dot_idx = field_full_name.find_last_of('.');
+	if(last_dot_idx == std::string_view::npos) {
+		return {};
+	}
+
+	auto composite_name = field_full_name.substr(0, last_dot_idx);
+	auto field_name = field_full_name.substr(last_dot_idx + 1);
+
+	auto composite_id =
+		find_by_name<ecsact_composite_id>(package_id, std::string{composite_name});
+
+	if(!composite_id) {
+		return {};
+	}
+
+	auto field_id = find_field_by_name(*composite_id, field_name);
+
+	if(!field_id) {
+		return {};
+	}
+
+	return ecsact_field_type{
+		.kind = ECSACT_TYPE_KIND_FIELD_INDEX,
+		.type = {
+			.field_index{
+				.composite_id = *composite_id,
+				.field_id = *field_id,
+			},
+		}};
+}
+
 template<>
 std::optional<ecsact_composite_id> find_by_statement(
 	ecsact_package_id       package_id,
@@ -969,20 +1004,36 @@ static ecsact_eval_error eval_user_type_field_statement(
 		}
 	}
 
-	auto user_type_name =
+	auto field_type_lookup =
 		std::string_view(data.user_type_name.data, data.user_type_name.length);
+
 	auto user_field_type =
-		find_user_field_type_by_name(package_id, user_type_name, data.length);
-	if(!user_field_type) {
+		find_user_field_type_by_name(package_id, field_type_lookup, data.length);
+
+	auto field_index_field_type =
+		find_field_by_full_name(package_id, field_type_lookup);
+
+	if(!user_field_type && !field_index_field_type) {
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_UNKNOWN_FIELD_TYPE,
 			.relevant_content = data.user_type_name,
 		};
 	}
 
+	if(user_field_type && field_index_field_type) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_AMBIGUOUS_FIELD_TYPE,
+			.relevant_content = data.user_type_name,
+		};
+	}
+
+	auto field_type = user_field_type //
+		? *user_field_type
+		: *field_index_field_type;
+
 	ecsact_add_field(
 		*compo_id,
-		*user_field_type,
+		field_type,
 		data.field_name.data,
 		data.field_name.length
 	);

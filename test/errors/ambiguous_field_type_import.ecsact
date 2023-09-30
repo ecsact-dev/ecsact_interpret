@@ -1,0 +1,5 @@
+package Amby;
+
+component amby {
+  i32 ambys_field;
+}
