@@ -1,0 +1,15 @@
+package eval.field_indexing;
+
+component Example {
+  i32 num;
+}
+
+component ExampleComponentWithIndexedField {
+  Example.num hello;
+}
+
+action ExampleActionWithIndexedField {
+  Example.num cool_field_name;
+
+  readonly Example;
+}

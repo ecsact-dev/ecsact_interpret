@@ -57,3 +57,19 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "field_indexing",
+    srcs = ["field_indexing.cc"],
+    copts = copts,
+    data = [
+        "field_indexing.ecsact",
+    ],
+    deps = [
+        ":test_lib",
+        "@ecsact_interpret",
+        "@bazel_sundry//bazel_sundry:runfiles",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
