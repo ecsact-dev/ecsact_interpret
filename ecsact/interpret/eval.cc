@@ -222,39 +222,6 @@ std::optional<ecsact_field_id> find_field_by_name(
 	return {};
 }
 
-std::optional<ecsact_enum_id> find_enum_by_name(
-	ecsact_package_id package_id,
-	std::string_view  target_enum_name
-) {
-	using ecsact::meta::get_enum_ids;
-
-	for(auto& enum_id : get_enum_ids(package_id)) {
-		std::string enum_name = ecsact_meta_enum_name(enum_id);
-		if(enum_name == target_enum_name) {
-			return enum_id;
-		}
-	}
-
-	return {};
-}
-
-std::optional<ecsact_field_type> find_user_field_type_by_name(
-	ecsact_package_id package_id,
-	std::string_view  user_type_name,
-	int32_t           length
-) {
-	auto enum_id = find_enum_by_name(package_id, user_type_name);
-	if(enum_id) {
-		return ecsact_field_type{
-			.kind = ECSACT_TYPE_KIND_ENUM,
-			.type{.enum_id = *enum_id},
-			.length = length,
-		};
-	}
-
-	return {};
-}
-
 template<typename R, typename T>
 static std::optional<R> cast_optional_id(std::optional<T> opt_id) {
 	if(opt_id) {
@@ -455,6 +422,24 @@ std::optional<ecsact_component_like_id> find_by_name(
 
 	if(auto id = find_by_name<ecsact_transient_id>(pkg_id, name)) {
 		return ecsact_id_cast<ecsact_component_like_id>(*id);
+	}
+
+	return {};
+}
+
+auto find_user_field_type_by_name(
+	ecsact_package_id package_id,
+	std::string_view  user_type_name,
+	int32_t           length
+) -> std::optional<ecsact_field_type> {
+	auto enum_id =
+		find_by_name<ecsact_enum_id>(package_id, std::string{user_type_name});
+	if(enum_id) {
+		return ecsact_field_type{
+			.kind = ECSACT_TYPE_KIND_ENUM,
+			.type{.enum_id = *enum_id},
+			.length = length,
+		};
 	}
 
 	return {};
@@ -973,7 +958,14 @@ static ecsact_eval_error eval_user_type_field_statement(
 	const ecsact_statement&            statement
 ) {
 	auto& data = statement.data.user_type_field_statement;
-	auto [context, err] = expect_context(context_stack, {ECSACT_STATEMENT_NONE});
+	auto [context, err] = expect_context(
+		context_stack,
+		{
+			ECSACT_STATEMENT_COMPONENT,
+			ECSACT_STATEMENT_TRANSIENT,
+			ECSACT_STATEMENT_ACTION,
+		}
+	);
 
 	if(err.code != ECSACT_EVAL_OK) {
 		err.relevant_content = data.user_type_name;

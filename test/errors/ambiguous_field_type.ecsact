@@ -3,7 +3,7 @@ package error.ambiguous_field_type;
 import Amby;
 
 component Amby {
-  i32 numnum;
+  i32 amby;
 }
 
 component ExampleComponent {

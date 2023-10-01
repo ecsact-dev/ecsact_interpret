@@ -1,5 +1,5 @@
 package Amby;
 
-component amby {
-  i32 ambys_field;
+enum amby {
+  SOME_VAL = 10;
 }
