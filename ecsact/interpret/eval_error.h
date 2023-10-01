@@ -75,6 +75,9 @@ typedef enum ecsact_eval_error_code {
 	// More than one system notify component statement for the same component.
 	ECSACT_EVAL_ERR_DUPLICATE_NOTIFY_COMPONENT,
 
+	/// Field type matches a user field and a field index name
+	ECSACT_EVAL_ERR_AMBIGUOUS_FIELD_TYPE,
+
 	/// Internal error. Should not happen and is an indiciation of a bug.
 	ECSACT_EVAL_ERR_INTERNAL = 999,
 

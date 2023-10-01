@@ -222,39 +222,6 @@ std::optional<ecsact_field_id> find_field_by_name(
 	return {};
 }
 
-std::optional<ecsact_enum_id> find_enum_by_name(
-	ecsact_package_id package_id,
-	std::string_view  target_enum_name
-) {
-	using ecsact::meta::get_enum_ids;
-
-	for(auto& enum_id : get_enum_ids(package_id)) {
-		std::string enum_name = ecsact_meta_enum_name(enum_id);
-		if(enum_name == target_enum_name) {
-			return enum_id;
-		}
-	}
-
-	return {};
-}
-
-std::optional<ecsact_field_type> find_user_field_type_by_name(
-	ecsact_package_id package_id,
-	std::string_view  user_type_name,
-	int32_t           length
-) {
-	auto enum_id = find_enum_by_name(package_id, user_type_name);
-	if(enum_id) {
-		return ecsact_field_type{
-			.kind = ECSACT_TYPE_KIND_ENUM,
-			.type{.enum_id = *enum_id},
-			.length = length,
-		};
-	}
-
-	return {};
-}
-
 template<typename R, typename T>
 static std::optional<R> cast_optional_id(std::optional<T> opt_id) {
 	if(opt_id) {
@@ -458,6 +425,60 @@ std::optional<ecsact_component_like_id> find_by_name(
 	}
 
 	return {};
+}
+
+auto find_user_field_type_by_name(
+	ecsact_package_id package_id,
+	std::string_view  user_type_name,
+	int32_t           length
+) -> std::optional<ecsact_field_type> {
+	auto enum_id =
+		find_by_name<ecsact_enum_id>(package_id, std::string{user_type_name});
+	if(enum_id) {
+		return ecsact_field_type{
+			.kind = ECSACT_TYPE_KIND_ENUM,
+			.type{.enum_id = *enum_id},
+			.length = length,
+		};
+	}
+
+	return {};
+}
+
+auto find_field_by_full_name(
+	ecsact_package_id package_id,
+	std::string_view  field_full_name
+) -> std::optional<ecsact_field_type> {
+	auto last_dot_idx = field_full_name.find_last_of('.');
+	if(last_dot_idx == std::string_view::npos) {
+		return {};
+	}
+
+	auto composite_name = field_full_name.substr(0, last_dot_idx);
+	auto field_name = field_full_name.substr(last_dot_idx + 1);
+
+	auto composite_id =
+		find_by_name<ecsact_composite_id>(package_id, std::string{composite_name});
+
+	if(!composite_id) {
+		return {};
+	}
+
+	auto field_id = find_field_by_name(*composite_id, field_name);
+
+	if(!field_id) {
+		return {};
+	}
+
+	return ecsact_field_type{
+		.kind = ECSACT_TYPE_KIND_FIELD_INDEX,
+		.type{
+			.field_index{
+				.composite_id = *composite_id,
+				.field_id = *field_id,
+			},
+		},
+	};
 }
 
 template<>
@@ -937,7 +958,14 @@ static ecsact_eval_error eval_user_type_field_statement(
 	const ecsact_statement&            statement
 ) {
 	auto& data = statement.data.user_type_field_statement;
-	auto [context, err] = expect_context(context_stack, {ECSACT_STATEMENT_NONE});
+	auto [context, err] = expect_context(
+		context_stack,
+		{
+			ECSACT_STATEMENT_COMPONENT,
+			ECSACT_STATEMENT_TRANSIENT,
+			ECSACT_STATEMENT_ACTION,
+		}
+	);
 
 	if(err.code != ECSACT_EVAL_OK) {
 		err.relevant_content = data.user_type_name;
@@ -969,20 +997,36 @@ static ecsact_eval_error eval_user_type_field_statement(
 		}
 	}
 
-	auto user_type_name =
+	auto field_type_lookup =
 		std::string_view(data.user_type_name.data, data.user_type_name.length);
+
 	auto user_field_type =
-		find_user_field_type_by_name(package_id, user_type_name, data.length);
-	if(!user_field_type) {
+		find_user_field_type_by_name(package_id, field_type_lookup, data.length);
+
+	auto field_index_field_type =
+		find_field_by_full_name(package_id, field_type_lookup);
+
+	if(!user_field_type && !field_index_field_type) {
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_UNKNOWN_FIELD_TYPE,
 			.relevant_content = data.user_type_name,
 		};
 	}
 
+	if(user_field_type && field_index_field_type) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_AMBIGUOUS_FIELD_TYPE,
+			.relevant_content = data.user_type_name,
+		};
+	}
+
+	auto field_type = user_field_type //
+		? *user_field_type
+		: *field_index_field_type;
+
 	ecsact_add_field(
 		*compo_id,
-		*user_field_type,
+		field_type,
 		data.field_name.data,
 		data.field_name.length
 	);
