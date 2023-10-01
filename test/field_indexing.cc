@@ -51,7 +51,10 @@ TEST(FieldIndexing, NoErrors) {
 	);
 
 	ASSERT_EQ(comp_field_type.kind, ECSACT_TYPE_KIND_FIELD_INDEX);
-	ASSERT_EQ(comp_field_type.type.field_index.composite_id, ecsact_id_cast<ecsact_composite_id>(example_comp_id));
+	ASSERT_EQ(
+		comp_field_type.type.field_index.composite_id,
+		ecsact_id_cast<ecsact_composite_id>(example_comp_id)
+	);
 	ASSERT_EQ(
 		comp_field_type.type.field_index.field_id,
 		example_comp_num_field_id
