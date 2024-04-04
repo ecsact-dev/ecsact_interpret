@@ -1,5 +1,5 @@
 # bazel
-bazel-*/
+bazel-*
 user.bazelrc
 
 # editor stuff
