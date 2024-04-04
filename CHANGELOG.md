@@ -2,6 +2,24 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.0 - 2024-04-04
+#### Miscellaneous Chores
+- **(deps)** update dependency bazel to v7.1.1 (#215) - (e4fff40) - renovate[bot]
+- **(deps)** update hedron_compile_commands digest to eca42c6 (#210) - (2ee274f) - renovate[bot]
+- **(deps)** update com_grail_bazel_toolchain digest to ade23e0 (#209) - (6b2a986) - renovate[bot]
+- **(deps)** update com_grail_bazel_toolchain digest to 7500623 (#206) - (de9c940) - renovate[bot]
+- **(deps)** update com_grail_bazel_toolchain digest to 1e5f3c6 (#204) - (01074e9) - renovate[bot]
+- **(deps)** update hedron_compile_commands digest to ac6411f (#203) - (4174205) - renovate[bot]
+- **(deps)** update com_grail_bazel_toolchain digest to 0a9feb7 (#202) - (03bf250) - renovate[bot]
+- **(deps)** update com_grail_bazel_toolchain digest to 42fa12b (#201) - (fbd05cc) - renovate[bot]
+- **(deps)** update com_grail_bazel_toolchain digest to a76d197 (#200) - (dbc863b) - renovate[bot]
+- update gitignore - (d4d963b) - Ezekiel Warren
+- update deps (#217) - (257c338) - Ezekiel Warren
+- bzlmod updates - (40927e3) - Ezekiel Warren
+- sync with ecsact_common (#197) - (71d1acb) - seaubot
+
+- - -
+
 ## 0.5.3 - 2023-10-01
 #### Features
 - field indexing (#198) - (b9d8208) - Ezekiel Warren
