@@ -1,6 +1,6 @@
 {
   "lockFileVersion": 6,
-  "moduleFileHash": "9e90cfe9457dfe3f613e659fddd80d2346b2dbf1c51dba6042cfb0bb15980398",
+  "moduleFileHash": "22e00f0a832f62eb00f3c72feef08dc8af27e6c72957f48faf3ac91958a3ad8f",
   "flags": {
     "cmdRegistries": [
       "https://raw.githubusercontent.com/ecsact-dev/bazel_registry/main",
@@ -65,7 +65,7 @@
         "rules_cc": "rules_cc@0.0.9",
         "bazel_skylib": "bazel_skylib@1.5.0",
         "magic_enum": "magic_enum@0.9.3",
-        "ecsact_runtime": "ecsact_runtime@0.6.0",
+        "ecsact_runtime": "ecsact_runtime@0.6.1",
         "ecsact_parse": "ecsact_parse@0.4.0",
         "toolchains_llvm": "toolchains_llvm@1.0.0",
         "hedron_compile_commands": "hedron_compile_commands@_",
@@ -180,10 +180,10 @@
         }
       }
     },
-    "ecsact_runtime@0.6.0": {
+    "ecsact_runtime@0.6.1": {
       "name": "ecsact_runtime",
-      "version": "0.6.0",
-      "key": "ecsact_runtime@0.6.0",
+      "version": "0.6.1",
+      "key": "ecsact_runtime@0.6.1",
       "repoName": "ecsact_runtime",
       "executionPlatformsToRegister": [],
       "toolchainsToRegister": [],
@@ -204,9 +204,9 @@
         "ruleClassName": "http_archive",
         "attributes": {
           "urls": [
-            "https://github.com/ecsact-dev/ecsact_runtime/releases/download/0.6.0/ecsact_runtime-0.6.0.tar.gz"
+            "https://github.com/ecsact-dev/ecsact_runtime/releases/download/0.6.1/ecsact_runtime-0.6.1.tar.gz"
           ],
-          "integrity": "sha256-+pY1idxdfTR0cPzXWc6ciKpbW+FHI/kRjqWimUWjrMw=",
+          "integrity": "sha256-BhaaAYDm6w9LvqOJjYruvWivfR1mvHVoaxSGpc2H9zQ=",
           "strip_prefix": "",
           "remote_patches": {},
           "remote_patch_strip": 0
@@ -224,7 +224,7 @@
       "deps": {
         "rules_cc": "rules_cc@0.0.9",
         "bazel_skylib": "bazel_skylib@1.5.0",
-        "ecsact_runtime": "ecsact_runtime@0.6.0",
+        "ecsact_runtime": "ecsact_runtime@0.6.1",
         "lexy": "lexy@2022.05.1",
         "magic_enum": "magic_enum@0.9.3",
         "bazel_tools": "bazel_tools@_",
