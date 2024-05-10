@@ -16,7 +16,7 @@
   },
   "localOverrideHashes": {
     "bazel_tools": "1ae69322ac3823527337acf02016e8ee95813d8d356f47060255b8956fa642f0",
-    "ecsact_interpret": "22e00f0a832f62eb00f3c72feef08dc8af27e6c72957f48faf3ac91958a3ad8f"
+    "ecsact_interpret": "29aa2e66ef8c593ef1b682f822498b7770dab5341d07f1cb9082a24d3e7bf13e"
   },
   "moduleDepGraph": {
     "<root>": {
@@ -372,7 +372,7 @@
     },
     "ecsact_interpret@_": {
       "name": "ecsact_interpret",
-      "version": "0.5.3",
+      "version": "0.6.0",
       "key": "ecsact_interpret@_",
       "repoName": "ecsact_interpret",
       "executionPlatformsToRegister": [],
@@ -3814,7 +3814,7 @@
     },
     "@@rules_foreign_cc~//foreign_cc:extensions.bzl%ext": {
       "general": {
-        "bzlTransitiveDigest": "QbxK92//k6c63fpMer2Lkk6224s9gwYoVFFS6mdkucI=",
+        "bzlTransitiveDigest": "0/GTFp9D0gb6hOu9jXXnaWa5hPbzPpIzLVxITdJTwvo=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -4085,7 +4085,7 @@
     },
     "@@rules_java~//java:extensions.bzl%toolchains": {
       "general": {
-        "bzlTransitiveDigest": "tJHbmWnq7m+9eUBnUdv7jZziQ26FmcGL9C5/hU3Q9UQ=",
+        "bzlTransitiveDigest": "0N5b5J9fUzo0sgvH4F3kIEaeXunz4Wy2/UtSFV/eXUY=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -4590,7 +4590,7 @@
     },
     "@@toolchains_llvm~//toolchain/extensions:llvm.bzl%llvm": {
       "general": {
-        "bzlTransitiveDigest": "rdQ1nlqTcj0kPoX7LxaygMQPcdnBPV85jNsRMF1M/Hw=",
+        "bzlTransitiveDigest": "S0z5hqi5KbDjXVFL5scNHSTTjB1/WWgKnGICpMb8kok=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
