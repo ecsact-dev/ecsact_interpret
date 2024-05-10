@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.1 - 2024-05-10
+#### Bug Fixes
+- empty api defines for bazel runtime (#220) - (0714b6c) - Ezekiel Warren
+
+- - -
+
 ## 0.6.0 - 2024-04-04
 #### Miscellaneous Chores
 - **(deps)** update dependency bazel to v7.1.1 (#215) - (e4fff40) - renovate[bot]
