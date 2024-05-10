@@ -8,8 +8,8 @@ cc_library(
     srcs = ["parse-resolver-runtime.cc"],
     copts = copts,
     defines = [
-        "ECSACT_DYNAMIC_API_EXPORT",
-        "ECSACT_META_API_EXPORT",
+        "ECSACT_DYNAMIC_API=\"\"",
+        "ECSACT_META_API=\"\"",
     ],
     deps = [
         "@ecsact_runtime//:dynamic",
