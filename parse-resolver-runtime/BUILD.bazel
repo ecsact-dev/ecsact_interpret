@@ -5,7 +5,7 @@ package(default_visibility = ["//:__subpackages__"])
 
 cc_library(
     name = "parse-resolver-runtime",
-    srcs = ["parse-resolver-runtime.cc"],
+    srcs = ["parse-resolver-runtime.cc", "assoc.cc"],
     copts = copts,
     defines = [
         "ECSACT_DYNAMIC_API=\"\"",
