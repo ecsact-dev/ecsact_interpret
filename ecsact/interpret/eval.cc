@@ -1767,13 +1767,13 @@ void ecsact_eval_reset() {
 }
 
 void ecsact::detail::check_file_eval_error(
-	ecsact_eval_error&      inout_error,
+	ecsact_eval_error&      in_out_error,
 	ecsact_package_id       package_id,
 	ecsact_parse_status     status,
 	const ecsact_statement& statement,
 	const std::string&      source
 ) {
-	assert(inout_error.code == ECSACT_EVAL_OK);
+	assert(in_out_error.code == ECSACT_EVAL_OK);
 
 	if(status.code == ECSACT_PARSE_STATUS_BLOCK_END) {
 		if(statement.type == ECSACT_STATEMENT_ACTION) {
@@ -1786,8 +1786,8 @@ void ecsact::detail::check_file_eval_error(
 
 			auto caps = ecsact::meta::system_capabilities(*act_id);
 			if(caps.empty()) {
-				inout_error.code = ECSACT_EVAL_ERR_NO_CAPABILITIES;
-				inout_error.relevant_content = {
+				in_out_error.code = ECSACT_EVAL_ERR_NO_CAPABILITIES;
+				in_out_error.relevant_content = {
 					.data = source.c_str(),
 					.length = static_cast<int32_t>(source.size()),
 				};
