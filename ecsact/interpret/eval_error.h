@@ -78,6 +78,9 @@ typedef enum ecsact_eval_error_code {
 	/// Field type matches a user field and a field index name
 	ECSACT_EVAL_ERR_AMBIGUOUS_FIELD_TYPE,
 
+	/// Nested association is not allowed
+	ECSACT_EVAL_ERR_NESTED_ASSOC,
+
 	/// Internal error. Should not happen and is an indiciation of a bug.
 	ECSACT_EVAL_ERR_INTERNAL = 999,
 

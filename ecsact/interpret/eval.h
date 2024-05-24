@@ -2,7 +2,8 @@
 #define ECSACT_INTERPRET_EVAL_H
 
 #include <stdint.h>
-#include "ecsact/parse.h"
+#include "ecsact/parse/statements.h"
+#include "ecsact/runtime/common.h"
 #include "ecsact/interpret/eval_error.h"
 
 typedef struct ecsact_eval_error {
@@ -31,9 +32,7 @@ ecsact_eval_error ecsact_eval_statement(
 	const ecsact_statement* statement_stack
 );
 
-/**
- * @deprecated
- */
+ECSACT_DEPRECATED("uneeded since interpreter does not hold state")
 void ecsact_eval_reset();
 
 #endif // ECSACT_INTERPRET_EVAL_H

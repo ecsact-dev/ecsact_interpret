@@ -18,6 +18,7 @@ cc_library(
     deps = [
         ":ecsact_interpret_detail",
         "//parse-resolver-runtime",
+        "@ecsact_runtime//:common",
         "@ecsact_parse",
     ],
 )

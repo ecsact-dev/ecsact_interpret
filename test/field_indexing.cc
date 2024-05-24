@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
-#include "ecsact/interpret/eval.h"
-#include "ecsact/runtime/meta.hh"
 
+#include "ecsact/runtime/meta.hh"
 #include "test_lib.hh"
 
 TEST(FieldIndexing, NoErrors) {
@@ -11,53 +10,35 @@ TEST(FieldIndexing, NoErrors) {
 
 	auto pkg_id = ecsact::meta::get_package_ids().at(0);
 
-	auto comp_ids = ecsact::meta::get_component_ids(pkg_id);
-	auto example_comp_id = comp_ids.at(0);
-	auto example_with_index_field_id = comp_ids.at(1);
+	auto example_comp = get_component_by_name(pkg_id, "Example");
+	ASSERT_TRUE(example_comp);
 
-	auto example_with_index_field_id_field_ids =
-		ecsact::meta::get_field_ids(example_with_index_field_id);
-	auto example_with_index_field_id_field_id =
-		example_with_index_field_id_field_ids.at(0);
+	auto single_field_index_comp =
+		get_component_by_name(pkg_id, "SingleFieldIndex");
+	ASSERT_TRUE(single_field_index_comp);
 
-	auto example_comp_field_ids = ecsact::meta::get_field_ids(example_comp_id);
-	auto example_comp_num_field_id = example_comp_field_ids.at(0);
+	auto field_index_action = get_action_by_name(pkg_id, "FieldIndexAction");
+	ASSERT_TRUE(field_index_action);
 
-	auto act_id = ecsact::meta::get_action_ids(pkg_id).at(0);
+	auto multi_field_comp = get_component_by_name(pkg_id, "MultiField");
+	ASSERT_TRUE(multi_field_comp);
 
-	auto act_field_ids = ecsact::meta::get_field_ids(act_id);
-	ASSERT_EQ(act_field_ids.size(), 1);
-	auto act_field_id = act_field_ids.at(0);
+	auto indexed_multi_field = get_component_by_name(pkg_id, "IndexedMultiField");
+	ASSERT_TRUE(indexed_multi_field);
 
-	auto act_field_type = ecsact_meta_field_type(
-		ecsact_id_cast<ecsact_composite_id>(act_id),
-		act_field_id
-	);
+	auto multi_field_index_system =
+		get_system_by_name(pkg_id, "MultiFieldIndexSystem");
+	ASSERT_TRUE(multi_field_index_system);
 
-	ASSERT_EQ(act_field_type.kind, ECSACT_TYPE_KIND_FIELD_INDEX);
+	auto multi_field_index_system_assoc_ids =
+		ecsact::meta::system_assoc_ids(*multi_field_index_system);
+	ASSERT_EQ(multi_field_index_system_assoc_ids.size(), 1);
+
 	ASSERT_EQ(
-		act_field_type.type.field_index.composite_id,
-		ecsact_id_cast<ecsact_composite_id>(example_comp_id)
+		ecsact::meta::system_assoc_component_id(
+			*multi_field_index_system,
+			multi_field_index_system_assoc_ids.at(0)
+		),
+		ecsact_id_cast<ecsact_component_like_id>(*indexed_multi_field)
 	);
-	ASSERT_EQ(
-		act_field_type.type.field_index.field_id,
-		example_comp_num_field_id
-	);
-	ASSERT_EQ(act_field_type.length, 0);
-
-	auto comp_field_type = ecsact_meta_field_type(
-		ecsact_id_cast<ecsact_composite_id>(example_with_index_field_id),
-		example_with_index_field_id_field_id
-	);
-
-	ASSERT_EQ(comp_field_type.kind, ECSACT_TYPE_KIND_FIELD_INDEX);
-	ASSERT_EQ(
-		comp_field_type.type.field_index.composite_id,
-		ecsact_id_cast<ecsact_composite_id>(example_comp_id)
-	);
-	ASSERT_EQ(
-		comp_field_type.type.field_index.field_id,
-		example_comp_num_field_id
-	);
-	ASSERT_EQ(comp_field_type.length, 0);
 }

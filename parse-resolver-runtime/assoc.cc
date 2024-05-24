@@ -1,41 +1,44 @@
 #include "ecsact/runtime/meta.h"
+#include "ecsact/runtime/dynamic.h"
 
-#include <type_traits>
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
 #include <utility>
+#include <memory>
+#include "parse-resolver-runtime/ids.hh"
+#include "parse-resolver-runtime/lifecycle.hh"
 
-static auto gen_next_assoc_id() -> ecsact_system_assoc_id {
-	static ecsact_system_assoc_id next_assoc_id = {};
-	ecsact_system_assoc_id        result = next_assoc_id;
-
-	reinterpret_cast<std::underlying_type_t<decltype(next_assoc_id)>&>(
-		next_assoc_id
-	) += 1;
-
-	return result;
-}
+using ecsact::interpret::details::event_ref;
+using ecsact::interpret::details::gen_next_id;
+using ecsact::interpret::details::on_destroy;
 
 struct assoc_info {
 	using cap_comp_list_t =
 		std::vector<std::pair<ecsact_component_like_id, ecsact_system_capability>>;
 
-	ecsact_system_assoc_id                  id;
-	std::optional<ecsact_component_like_id> comp_id;
-	std::vector<ecsact_field_id>            assoc_fields;
+	ecsact_system_assoc_id       id;
+	ecsact_component_like_id     comp_id;
+	std::vector<ecsact_field_id> assoc_fields;
 
 	cap_comp_list_t caps;
+
+	std::vector<event_ref> event_refs;
+
+	assoc_info() = default;
+	assoc_info(assoc_info&&) = default;
+	~assoc_info() = default;
 };
 
-using system_assoc_map_info_t =
-	std::unordered_map<ecsact_system_like_id, std::vector<assoc_info>>;
+using system_assoc_map_info_t = std::unordered_map<
+	ecsact_system_like_id,
+	std::vector<std::shared_ptr<assoc_info>>>;
 
 static system_assoc_map_info_t system_assoc_info{};
 
 static auto get_system_assoc_list( //
 	ecsact_system_like_id system_id
-) -> std::vector<assoc_info>* {
+) -> std::vector<std::shared_ptr<assoc_info>>* {
 	auto itr = system_assoc_info.find(system_id);
 	if(itr != system_assoc_info.end()) {
 		return &itr->second;
@@ -47,36 +50,49 @@ static auto get_system_assoc_list( //
 static auto get_assoc_info( //
 	ecsact_system_like_id  system_id,
 	ecsact_system_assoc_id assoc_id
-) -> assoc_info* {
+) -> std::shared_ptr<assoc_info> {
 	auto list = get_system_assoc_list(system_id);
 	if(!list) {
-		return nullptr;
+		return {};
 	}
 
 	auto itr = std::find_if( //
 		list->begin(),
 		list->end(),
-		[=](auto item) -> bool { return item.id == assoc_id; }
+		[=](const auto& item) -> bool { return item->id == assoc_id; }
 	);
 
 	if(itr == list->end()) {
-		return nullptr;
+		return {};
 	}
 
-	return &(*itr);
+	return *itr;
 }
 
 ecsact_system_assoc_id ecsact_add_system_assoc( //
-	ecsact_system_like_id system_id
+	ecsact_system_like_id    system_id,
+	ecsact_component_like_id component_id
 ) {
 	auto itr = system_assoc_info.find(system_id);
 	if(itr == system_assoc_info.end()) {
 		itr = system_assoc_info.insert(system_assoc_info.end(), {system_id, {}});
 	}
 
-	auto& info = itr->second.emplace_back(assoc_info{});
-	info.id = gen_next_assoc_id();
-	return info.id;
+	auto& info = itr->second.emplace_back(std::make_shared<assoc_info>());
+	info->id = gen_next_id<ecsact_system_assoc_id>();
+	info->comp_id = component_id;
+
+	info->event_refs
+		.emplace_back(on_destroy(system_id, [system_id, assoc_id = info->id]() {
+			ecsact_remove_system_assoc(system_id, assoc_id);
+		}));
+
+	info->event_refs
+		.emplace_back(on_destroy(component_id, [system_id, assoc_id = info->id]() {
+			ecsact_remove_system_assoc(system_id, assoc_id);
+		}));
+
+	return info->id;
 }
 
 void ecsact_remove_system_assoc( //
@@ -92,7 +108,7 @@ void ecsact_remove_system_assoc( //
 	auto itr = std::find_if( //
 		list->begin(),
 		list->end(),
-		[=](auto item) -> bool { return item.id == assoc_id; }
+		[=](const auto& item) -> bool { return item->id == assoc_id; }
 	);
 
 	if(itr == list->end()) {
@@ -101,6 +117,85 @@ void ecsact_remove_system_assoc( //
 	}
 
 	list->erase(itr);
+}
+
+void ecsact_add_system_assoc_field(
+	ecsact_system_like_id  system_id,
+	ecsact_system_assoc_id assoc_id,
+	ecsact_field_id        field_id
+) {
+	auto info = get_assoc_info(system_id, assoc_id);
+	if(!info) {
+		return;
+	}
+
+	auto itr = std::find( //
+		info->assoc_fields.begin(),
+		info->assoc_fields.end(),
+		field_id
+	);
+
+	if(itr != info->assoc_fields.end()) {
+		// Field already added. User error.
+		return;
+	}
+
+	info->assoc_fields.push_back(field_id);
+}
+
+void ecsact_remove_system_assoc_field(
+	ecsact_system_like_id  system_id,
+	ecsact_system_assoc_id assoc_id,
+	ecsact_field_id        field_id
+) {
+	auto info = get_assoc_info(system_id, assoc_id);
+	if(!info) {
+		return;
+	}
+
+	auto itr = std::find( //
+		info->assoc_fields.begin(),
+		info->assoc_fields.end(),
+		field_id
+	);
+
+	if(itr == info->assoc_fields.end()) {
+		// Field is already not associated. User error.
+		return;
+	}
+
+	info->assoc_fields.erase(itr);
+}
+
+void ecsact_set_system_assoc_capability(
+	ecsact_system_like_id    system_id,
+	ecsact_system_assoc_id   assoc_id,
+	ecsact_component_like_id comp_id,
+	ecsact_system_capability cap
+) {
+	auto info = get_assoc_info(system_id, assoc_id);
+	if(!info) {
+		return;
+	}
+
+	auto itr = std::find_if(
+		info->caps.begin(),
+		info->caps.end(),
+		[&](const auto& entry) -> bool { return entry.first == comp_id; }
+	);
+
+	if(cap == ECSACT_SYS_CAP_NONE) {
+		if(itr != info->caps.end()) {
+			info->caps.erase(itr);
+		}
+		return;
+	}
+
+	if(itr == info->caps.end()) {
+		info->caps.emplace_back(comp_id, cap);
+	} else {
+		itr->second = cap;
+	}
 }
 
 int32_t ecsact_meta_system_assoc_count( //
@@ -114,7 +209,7 @@ int32_t ecsact_meta_system_assoc_count( //
 	return 0;
 }
 
-int32_t ecsact_meta_system_assoc_ids(
+void ecsact_meta_system_assoc_ids(
 	ecsact_system_like_id   system_id,
 	int32_t                 max_assoc_count,
 	ecsact_system_assoc_id* out_assoc_ids,
@@ -125,7 +220,7 @@ int32_t ecsact_meta_system_assoc_ids(
 		if(out_assoc_count) {
 			*out_assoc_count = 0;
 		}
-		return 0;
+		return;
 	}
 
 	if(out_assoc_count) {
@@ -137,10 +232,8 @@ int32_t ecsact_meta_system_assoc_ids(
 			break;
 		}
 		auto& assoc = list->at(i);
-		out_assoc_ids[i] = assoc.id;
+		out_assoc_ids[i] = assoc->id;
 	}
-
-	return 0;
 }
 
 int32_t ecsact_meta_system_assoc_fields_count(
@@ -155,7 +248,7 @@ int32_t ecsact_meta_system_assoc_fields_count(
 	return static_cast<int>(info->assoc_fields.size());
 }
 
-int32_t ecsact_meta_system_assoc_fields(
+void ecsact_meta_system_assoc_fields(
 	ecsact_system_like_id  system_id,
 	ecsact_system_assoc_id assoc_id,
 	int32_t                max_fields_count,
@@ -167,7 +260,7 @@ int32_t ecsact_meta_system_assoc_fields(
 		if(out_fields_count) {
 			*out_fields_count = 0;
 		}
-		return 0;
+		return;
 	}
 
 	if(out_fields_count) {
@@ -180,8 +273,6 @@ int32_t ecsact_meta_system_assoc_fields(
 		}
 		out_fields[i] = info->assoc_fields[i];
 	}
-
-	return 0;
 }
 
 int32_t ecsact_meta_system_assoc_capabilities_count(
