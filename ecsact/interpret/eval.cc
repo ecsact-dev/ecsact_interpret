@@ -13,9 +13,8 @@
 #include "ecsact/runtime/dynamic.h"
 #include "ecsact/runtime/meta.hh"
 #include "ecsact/runtime/meta.h"
-
-#include "./detail/file_eval_error.hh"
-#include "eval_error.h"
+#include "ecsact/interpret/detail/file_eval_error.hh"
+#include "ecsact/interpret/eval_error.h"
 
 using namespace std::string_literals;
 using namespace std::string_view_literals;
