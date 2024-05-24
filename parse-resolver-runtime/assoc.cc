@@ -21,9 +21,9 @@ struct assoc_info {
 	using cap_comp_list_t =
 		std::vector<std::pair<ecsact_component_like_id, ecsact_system_capability>>;
 
-	ecsact_system_assoc_id       id;
-	ecsact_component_like_id     comp_id;
-	std::vector<ecsact_field_id> assoc_fields;
+	ecsact_system_assoc_id                  id;
+	std::optional<ecsact_component_like_id> comp_id;
+	std::vector<ecsact_field_id>            assoc_fields;
 
 	cap_comp_list_t caps;
 };
