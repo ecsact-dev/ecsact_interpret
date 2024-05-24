@@ -7,7 +7,7 @@ using ecsact::interpret::details::castable_destroyable_ids_t;
 using ecsact::interpret::details::destroyable_id_t;
 using ecsact::interpret::details::event_ref_id;
 
-struct lifecycle_calback_info {
+struct lifecycle_callback_info {
 	event_ref_id                          last_event_ref_id = {};
 	std::unordered_map<event_ref_id, int> callback_id;
 	std::unordered_map<event_ref_id, std::function<void()>> callbacks;
@@ -20,7 +20,7 @@ struct lifecycle_calback_info {
 };
 
 static std::array< //
-	lifecycle_calback_info,
+	lifecycle_callback_info,
 	std::variant_size_v<castable_destroyable_ids_t>>
 	lifecycle_info = {};
 
@@ -32,7 +32,7 @@ static auto destroyable_id_as_int(destroyable_id_t id) -> int {
 	return std::visit([](auto id) { return static_cast<int>(id); }, id);
 }
 
-static auto callback_indicies(destroyable_id_t id) -> std::vector<int> {
+static auto callback_indices(destroyable_id_t id) -> std::vector<int> {
 	auto result = std::vector<int>{};
 	result.emplace_back(static_cast<int>(id.index()));
 
@@ -101,7 +101,7 @@ auto ecsact::interpret::details::on_destroy( //
 auto ecsact::interpret::details::trigger_on_destroy( //
 	destroyable_id_t id
 ) -> void {
-	for(auto index : callback_indicies(id)) {
+	for(auto index : callback_indices(id)) {
 		auto& info = lifecycle_info[index];
 		for(auto itr = info.callback_id.begin(); itr != info.callback_id.end();) {
 			auto& event_ref = itr->first;

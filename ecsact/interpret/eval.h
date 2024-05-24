@@ -32,7 +32,7 @@ ecsact_eval_error ecsact_eval_statement(
 	const ecsact_statement* statement_stack
 );
 
-ECSACT_DEPRECATED("uneeded since interpreter does not hold state")
+ECSACT_DEPRECATED("unneeded since interpreter does not hold state")
 void ecsact_eval_reset();
 
 #endif // ECSACT_INTERPRET_EVAL_H
