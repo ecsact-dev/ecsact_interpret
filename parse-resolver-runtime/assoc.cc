@@ -236,6 +236,19 @@ void ecsact_meta_system_assoc_ids(
 	}
 }
 
+ecsact_component_like_id ecsact_meta_system_assoc_component_id(
+	ecsact_system_like_id  system_id,
+	ecsact_system_assoc_id assoc_id
+) {
+	auto info = get_assoc_info(system_id, assoc_id);
+	if(!info) {
+		// Invalid assoc. User error.
+		return ECSACT_INVALID_ID(component_like);
+	}
+
+	return info->comp_id;
+}
+
 int32_t ecsact_meta_system_assoc_fields_count(
 	ecsact_system_like_id  system_id,
 	ecsact_system_assoc_id assoc_id

@@ -49,6 +49,24 @@ inline auto get_action_by_name( //
 	return {};
 }
 
+template<typename CompositeID>
+inline auto get_field_by_name( //
+	CompositeID id,
+	std::string target_field_name
+) -> std::optional<ecsact_field_id> {
+	auto field_ids = ecsact::meta::get_field_ids(id);
+	for(auto field_id : field_ids) {
+		std::string field_name =
+			ecsact_meta_field_name(ecsact_id_cast<ecsact_composite_id>(id), field_id);
+
+		if(field_name == target_field_name) {
+			return field_id;
+		}
+	}
+
+	return {};
+}
+
 inline auto ecsact_interpret_test_files(
 	std::vector<std::string> relative_file_paths
 ) -> std::vector<ecsact::parse_eval_error> {

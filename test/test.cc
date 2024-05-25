@@ -123,10 +123,10 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 			 );
 			 ASSERT_EQ(sys_caps[0], ECSACT_SYS_CAP_READWRITE);
 
-			 auto assoc_fields = ecsact::meta::system_association_fields(
-				 sys_like_id,
-				 ecsact_id_cast<ecsact_component_like_id>(comp_id)
-			 );
+			 auto assoc_ids = ecsact::meta::system_assoc_ids(sys_like_id);
+			 ASSERT_EQ(assoc_ids.size(), 1);
+			 auto assoc_fields =
+				 ecsact::meta::system_assoc_fields(sys_like_id, assoc_ids.at(0));
 			 ASSERT_EQ(assoc_fields.size(), 1);
 			 auto field_id = *assoc_fields.begin();
 			 auto assoc_field_name = ecsact_meta_field_name(

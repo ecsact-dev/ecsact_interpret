@@ -1,5 +1,6 @@
 #include "ecsact/interpret/eval.h"
 
+#include <set>
 #include <unordered_map>
 #include <string_view>
 #include <vector>
@@ -41,6 +42,7 @@ static auto expect_context(
 	}
 
 	if(context_stack.empty()) {
+		__debugbreak();
 		return {
 			nullptr,
 			ecsact_eval_error{
@@ -58,6 +60,7 @@ static auto expect_context(
 		}
 	}
 
+	__debugbreak();
 	return {
 		&context,
 		ecsact_eval_error{
@@ -756,6 +759,7 @@ static ecsact_eval_error eval_system_statement(
 		parent_sys_like_id =
 			find_by_statement<ecsact_system_like_id>(package_id, *context);
 		if(!parent_sys_like_id) {
+			__debugbreak();
 			return ecsact_eval_error{
 				.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 				.relevant_content = {},
@@ -891,6 +895,7 @@ static ecsact_eval_error eval_enum_value_statement(
 
 	auto enum_id = find_by_name<ecsact_enum_id>(package_id, enum_name);
 	if(!enum_id) {
+		__debugbreak();
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 			.relevant_content = context_data.enum_name,
@@ -927,6 +932,7 @@ static ecsact_eval_error eval_builtin_type_field_statement(
 
 	auto compo_id = find_by_statement<ecsact_composite_id>(package_id, *context);
 	if(!compo_id) {
+		__debugbreak();
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 			.relevant_content = {},
@@ -986,6 +992,7 @@ static ecsact_eval_error eval_user_type_field_statement(
 	auto compo_id =
 		find_by_statement<ecsact_composite_id>(package_id, context_stack.back());
 	if(!compo_id) {
+		__debugbreak();
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 			.relevant_content = {},
@@ -1053,6 +1060,35 @@ static ecsact_eval_error eval_entity_field_statement(
 	);
 }
 
+static auto get_with_field_ids(
+	ecsact_system_like_id                sys_like_id,
+	ecsact_component_like_id             comp_like_id,
+	std::span<const ecsact_statement_sv> fields
+) -> std::vector<ecsact_field_id> {
+	auto with_field_ids = std::vector<ecsact_field_id>{};
+	for(int i = 0; fields.size() > i; ++i) {
+		auto assoc_field_name =
+			std::string_view{fields[i].data, static_cast<size_t>(fields[i].length)};
+
+		auto assoc_field_id = std::optional<ecsact_field_id>{};
+
+		for(auto field_id : ecsact::meta::get_field_ids(comp_like_id)) {
+			std::string field_name = ecsact_meta_field_name(
+				ecsact_id_cast<ecsact_composite_id>(comp_like_id),
+				field_id
+			);
+			if(assoc_field_name == field_name) {
+				assoc_field_id = field_id;
+				break;
+			}
+		}
+
+		assert(assoc_field_id.has_value());
+		with_field_ids.emplace_back(*assoc_field_id);
+	}
+	return with_field_ids;
+}
+
 static auto eval_system_with_statement_data_common(
 	ecsact_system_like_id                sys_like_id,
 	ecsact_component_like_id             comp_like_id,
@@ -1082,6 +1118,8 @@ static auto eval_system_with_statement_data_common(
 				.relevant_content = fields[i],
 			};
 		}
+
+		with_field_ids.emplace_back(*assoc_field_id);
 	}
 
 	if(with_field_ids.empty()) {
@@ -1100,6 +1138,41 @@ static auto eval_system_with_statement_data_common(
 	return {};
 }
 
+template<typename SystemLikeID>
+static auto find_assoc_ids_with_fields( //
+	SystemLikeID sys_like_id,
+	auto         target_fields
+) -> std::vector<ecsact_system_assoc_id> {
+	auto assoc_ids = std::set<ecsact_system_assoc_id>{};
+	for(auto assoc_id : ecsact::meta::system_assoc_ids(sys_like_id)) {
+		auto fields = ecsact::meta::system_assoc_fields(sys_like_id, assoc_id);
+		auto matching_fields = std::vector<ecsact_field_id>{};
+		for(auto field : fields) {
+			auto found_target_field = false;
+			for(auto target_field : target_fields) {
+				if(field != target_field) {
+					found_target_field = true;
+					matching_fields.push_back(field);
+				}
+			}
+
+			if(!found_target_field) {
+				break;
+			}
+		}
+
+		assert(matching_fields.size() <= fields.size());
+		if(matching_fields.size() == fields.size()) {
+			assoc_ids.insert(assoc_id);
+		}
+	}
+
+	return std::vector<ecsact_system_assoc_id>{
+		assoc_ids.begin(),
+		assoc_ids.end()
+	};
+}
+
 static ecsact_eval_error eval_system_component_statement(
 	ecsact_package_id                  package_id,
 	std::span<const ecsact_statement>& context_stack,
@@ -1111,6 +1184,7 @@ static ecsact_eval_error eval_system_component_statement(
 			ECSACT_STATEMENT_SYSTEM,
 			ECSACT_STATEMENT_ACTION,
 			ECSACT_STATEMENT_SYSTEM_COMPONENT,
+			ECSACT_STATEMENT_SYSTEM_WITH,
 		}
 	);
 
@@ -1175,6 +1249,64 @@ static ecsact_eval_error eval_system_component_statement(
 				return ecsact_eval_error{
 					.code = ECSACT_EVAL_ERR_NESTED_ASSOC,
 					.relevant_content = statement_data.with_field_name_list[0],
+				};
+			}
+
+			break;
+		}
+		// system Example {
+		//     readwrite ExampleComponent {
+		//        with blah {
+		//            readwrite ExampleComponent <-- we are here
+		//        }
+		//     }
+		// }
+		case ECSACT_STATEMENT_SYSTEM_WITH: {
+			if(context_stack.size() < 3) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+					.relevant_content = {},
+				};
+			}
+			sys_like_id = find_by_statement<ecsact_system_like_id>(
+				package_id,
+				context_stack[context_stack.size() - 3]
+			);
+			if(!sys_like_id) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+					.relevant_content = {},
+				};
+			}
+
+			auto assoc_comp_id = find_by_statement<ecsact_component_like_id>(
+				package_id,
+				context_stack[context_stack.size() - 2]
+			);
+			if(!assoc_comp_id) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+					.relevant_content = {},
+				};
+			}
+
+			auto fields = get_with_field_ids(
+				*sys_like_id,
+				*comp_like_id,
+				std::span{
+					std::data(context->data.system_with_statement.with_field_name_list),
+					static_cast<size_t>(
+						context->data.system_with_statement.with_field_name_list_count
+					)
+				}
+			);
+
+			auto assoc_ids = find_assoc_ids_with_fields(*sys_like_id, fields);
+
+			if(assoc_ids.size() > 1) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_SAME_FIELDS_SYSTEM_ASSOCIATION,
+					.relevant_content = {},
 				};
 			}
 
@@ -1268,6 +1400,7 @@ static ecsact_eval_error eval_system_generates_statement(
 		find_by_statement<ecsact_system_like_id>(package_id, context_stack.back());
 
 	if(!sys_like_id) {
+		__debugbreak();
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 			.relevant_content = {},

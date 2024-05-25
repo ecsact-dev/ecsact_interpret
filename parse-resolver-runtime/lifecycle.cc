@@ -79,8 +79,17 @@ auto ecsact::interpret::details::event_ref::clear() -> void {
 		return;
 	}
 
+	if(destroyable_index_ >= lifecycle_info.size()) {
+		return;
+	}
+
 	auto& info = lifecycle_info[destroyable_index_];
-	info.callbacks.erase(id_);
+	// if(info.callbacks.contains(id_)) {
+	// 	info.callbacks.erase(id_);
+	// }
+	// if(info.callback_id.contains(id_)) {
+	// 	info.callback_id.erase(id_);
+	// }
 	id_ = {};
 }
 
