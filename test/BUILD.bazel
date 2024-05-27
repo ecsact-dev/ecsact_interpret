@@ -1,5 +1,5 @@
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@ecsact_interpret//bazel:copts.bzl", "copts")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 cc_library(
     name = "test_lib",
@@ -16,6 +16,7 @@ cc_test(
     name = "test",
     srcs = ["test.cc"],
     copts = copts,
+    args = ["--gtest_catch_exceptions=0"],
     data = ["test.ecsact"],
     deps = [
         "@ecsact_interpret",

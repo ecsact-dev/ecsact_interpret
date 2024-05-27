@@ -3,9 +3,70 @@
 #include <iostream>
 #include <vector>
 #include <filesystem>
+#include <optional>
+#include <string>
 #include "gtest/gtest.h"
 #include "ecsact/interpret/eval.hh"
+#include "ecsact/runtime/meta.hh"
+#include "magic_enum.hpp"
 #include "bazel_sundry/runfiles.hh"
+
+inline auto get_component_by_name( //
+	ecsact_package_id pkg_id,
+	std::string       name
+) -> std::optional<ecsact_component_id> {
+	for(auto comp_id : ecsact::meta::get_component_ids(pkg_id)) {
+		if(ecsact::meta::component_name(comp_id) == name) {
+			return comp_id;
+		}
+	}
+
+	return {};
+}
+
+inline auto get_system_by_name( //
+	ecsact_package_id pkg_id,
+	std::string       name
+) -> std::optional<ecsact_system_id> {
+	for(auto sys_id : ecsact::meta::get_system_ids(pkg_id)) {
+		if(ecsact::meta::system_name(sys_id) == name) {
+			return sys_id;
+		}
+	}
+
+	return {};
+}
+
+inline auto get_action_by_name( //
+	ecsact_package_id pkg_id,
+	std::string       name
+) -> std::optional<ecsact_action_id> {
+	for(auto act_id : ecsact::meta::get_action_ids(pkg_id)) {
+		if(ecsact::meta::action_name(act_id) == name) {
+			return act_id;
+		}
+	}
+
+	return {};
+}
+
+template<typename CompositeID>
+inline auto get_field_by_name( //
+	CompositeID id,
+	std::string target_field_name
+) -> std::optional<ecsact_field_id> {
+	auto field_ids = ecsact::meta::get_field_ids(id);
+	for(auto field_id : field_ids) {
+		std::string field_name =
+			ecsact_meta_field_name(ecsact_id_cast<ecsact_composite_id>(id), field_id);
+
+		if(field_name == target_field_name) {
+			return field_id;
+		}
+	}
+
+	return {};
+}
 
 inline auto ecsact_interpret_test_files(
 	std::vector<std::string> relative_file_paths

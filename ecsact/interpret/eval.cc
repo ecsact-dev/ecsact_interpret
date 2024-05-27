@@ -1,6 +1,6 @@
 #include "ecsact/interpret/eval.h"
 
-#include <concepts>
+#include <set>
 #include <unordered_map>
 #include <string_view>
 #include <vector>
@@ -8,16 +8,17 @@
 #include <string_view>
 #include <cassert>
 #include <optional>
-#include <stdexcept>
 #include <span>
 #include <variant>
-#include "magic_enum.hpp"
-#include "ecsact/parse.h"
+#include "ecsact/parse/status.h"
 #include "ecsact/runtime/dynamic.h"
 #include "ecsact/runtime/meta.hh"
 #include "ecsact/runtime/meta.h"
+#include "ecsact/interpret/detail/file_eval_error.hh"
+#include "ecsact/interpret/eval_error.h"
 
-#include "./detail/file_eval_error.hh"
+using ecsact::meta::system_assoc_capabilities;
+using ecsact::meta::system_capabilities;
 
 using namespace std::string_literals;
 using namespace std::string_view_literals;
@@ -30,6 +31,10 @@ struct overloaded : Ts... {
 };
 template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
+
+auto as_sv(ecsact_statement_sv sv) -> std::string_view {
+	return std::string_view{sv.data, static_cast<size_t>(sv.length)};
+}
 
 static auto expect_context(
 	std::span<const ecsact_statement>& context_stack,
@@ -555,6 +560,14 @@ std::optional<ecsact_component_like_id> find_by_statement(
 					)
 				)
 			);
+		case ECSACT_STATEMENT_SYSTEM_COMPONENT:
+			return find_by_name<ecsact_component_like_id>(
+				package_id,
+				std::string(
+					statement.data.system_component_statement.component_name.data,
+					statement.data.system_component_statement.component_name.length
+				)
+			);
 		default:
 			break;
 	}
@@ -1056,6 +1069,130 @@ static ecsact_eval_error eval_entity_field_statement(
 	);
 }
 
+static auto get_with_field_ids(
+	ecsact_system_like_id                sys_like_id,
+	ecsact_component_like_id             comp_like_id,
+	std::span<const ecsact_statement_sv> fields
+) -> std::vector<ecsact_field_id> {
+	auto with_field_ids = std::vector<ecsact_field_id>{};
+	for(int i = 0; fields.size() > i; ++i) {
+		auto assoc_field_name =
+			std::string_view{fields[i].data, static_cast<size_t>(fields[i].length)};
+
+		auto assoc_field_id = std::optional<ecsact_field_id>{};
+
+		for(auto field_id : ecsact::meta::get_field_ids(comp_like_id)) {
+			std::string field_name = ecsact_meta_field_name(
+				ecsact_id_cast<ecsact_composite_id>(comp_like_id),
+				field_id
+			);
+			if(assoc_field_name == field_name) {
+				assoc_field_id = field_id;
+				break;
+			}
+		}
+
+		assert(assoc_field_id.has_value());
+		with_field_ids.emplace_back(*assoc_field_id);
+	}
+	return with_field_ids;
+}
+
+static auto eval_system_with_statement_data_common(
+	ecsact_system_like_id                sys_like_id,
+	ecsact_component_like_id             comp_like_id,
+	std::span<const ecsact_statement_sv> fields
+) -> ecsact_eval_error {
+	auto with_field_ids = std::vector<ecsact_field_id>{};
+	for(int i = 0; fields.size() > i; ++i) {
+		auto assoc_field_name =
+			std::string_view{fields[i].data, static_cast<size_t>(fields[i].length)};
+
+		auto assoc_field_id = std::optional<ecsact_field_id>{};
+
+		for(auto field_id : ecsact::meta::get_field_ids(comp_like_id)) {
+			std::string field_name = ecsact_meta_field_name(
+				ecsact_id_cast<ecsact_composite_id>(comp_like_id),
+				field_id
+			);
+			if(assoc_field_name == field_name) {
+				assoc_field_id = field_id;
+				break;
+			}
+		}
+
+		if(!assoc_field_id) {
+			return ecsact_eval_error{
+				.code = ECSACT_EVAL_ERR_UNKNOWN_FIELD_NAME,
+				.relevant_content = fields[i],
+			};
+		}
+
+		with_field_ids.emplace_back(*assoc_field_id);
+	}
+
+	if(with_field_ids.empty()) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_UNEXPECTED_STATEMENT,
+			.relevant_content = {},
+		};
+	}
+
+	auto assoc_id = ecsact_add_system_assoc(sys_like_id, comp_like_id);
+
+	for(auto assoc_field_id : with_field_ids) {
+		ecsact_add_system_assoc_field(sys_like_id, assoc_id, assoc_field_id);
+	}
+
+	return {};
+}
+
+template<typename SystemLikeID, typename ComponentLikeID>
+static auto find_assoc_ids_with_fields( //
+	SystemLikeID    sys_like_id,
+	ComponentLikeID comp_like_id,
+	auto            target_field_names
+) -> std::vector<ecsact_system_assoc_id> {
+	assert(std::size(target_field_names) > 0);
+	auto assoc_ids = std::set<ecsact_system_assoc_id>{};
+	for(auto assoc_id : ecsact::meta::system_assoc_ids(sys_like_id)) {
+		auto assoc_comp_id =
+			ecsact::meta::system_assoc_component_id(sys_like_id, assoc_id);
+		if(assoc_comp_id != comp_like_id) {
+			continue;
+		}
+
+		auto fields = ecsact::meta::system_assoc_fields(sys_like_id, assoc_id);
+		auto matching_fields = std::vector<ecsact_field_id>{};
+		for(auto field : fields) {
+			auto field_name = ecsact::meta::field_name(comp_like_id, field);
+			auto found_target_field = false;
+			for(auto target_field_name : target_field_names) {
+				if(field_name == as_sv(target_field_name)) {
+					found_target_field = true;
+					matching_fields.push_back(field);
+				}
+			}
+
+			if(!found_target_field) {
+				break;
+			}
+		}
+
+		assert(matching_fields.size() <= fields.size());
+		if(matching_fields.size() == fields.size()) {
+			assoc_ids.insert(assoc_id);
+		}
+	}
+
+	assert(!assoc_ids.empty());
+
+	return std::vector<ecsact_system_assoc_id>{
+		assoc_ids.begin(),
+		assoc_ids.end()
+	};
+}
+
 static ecsact_eval_error eval_system_component_statement(
 	ecsact_package_id                  package_id,
 	std::span<const ecsact_statement>& context_stack,
@@ -1067,6 +1204,7 @@ static ecsact_eval_error eval_system_component_statement(
 			ECSACT_STATEMENT_SYSTEM,
 			ECSACT_STATEMENT_ACTION,
 			ECSACT_STATEMENT_SYSTEM_COMPONENT,
+			ECSACT_STATEMENT_SYSTEM_WITH,
 		}
 	);
 
@@ -1080,20 +1218,42 @@ static ecsact_eval_error eval_system_component_statement(
 		return *err;
 	}
 
-	std::optional<ecsact_system_like_id>    sys_like_id{};
-	std::optional<ecsact_component_like_id> assoc_comp{};
-	std::optional<ecsact_field_id>          assoc_comp_field{};
+	auto& statement_data = statement.data.system_component_statement;
+	auto  sys_like_id = std::optional<ecsact_system_like_id>{};
+	auto  assoc_id = std::optional<ecsact_system_assoc_id>{};
+
+	std::string comp_like_name(
+		statement_data.component_name.data,
+		statement_data.component_name.length
+	);
+
+	auto comp_like_id =
+		find_by_name<ecsact_component_like_id>(package_id, comp_like_name);
+
+	if(!comp_like_id) {
+		return ecsact_eval_error{
+			.code = ECSACT_EVAL_ERR_UNKNOWN_COMPONENT_LIKE_TYPE,
+			.relevant_content = statement_data.component_name,
+		};
+	}
 
 	// See expect_context above for options here
 	switch(context->type) {
+		// system Example {
+		//     readwrite ExampleComponent with blah  <-- we are here
+		// }
 		case ECSACT_STATEMENT_SYSTEM:
-		case ECSACT_STATEMENT_ACTION:
+		case ECSACT_STATEMENT_ACTION: {
 			sys_like_id =
 				find_by_statement<ecsact_system_like_id>(package_id, *context);
 			break;
+		}
+		// system Example {
+		//     readwrite ExampleComponent with blah {
+		//         readwrite ExampleComponent  <-- we are here
+		//     }
+		// }
 		case ECSACT_STATEMENT_SYSTEM_COMPONENT: {
-			auto& data = context->data.system_component_statement;
-
 			if(context_stack.size() < 2) {
 				return ecsact_eval_error{
 					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
@@ -1105,40 +1265,105 @@ static ecsact_eval_error eval_system_component_statement(
 				context_stack[context_stack.size() - 2]
 			);
 
-			std::string comp_like_name(
-				data.component_name.data,
-				data.component_name.length
-			);
-
-			assoc_comp =
-				find_by_name<ecsact_component_like_id>(package_id, comp_like_name);
-			if(!assoc_comp) {
+			if(!sys_like_id) {
 				return ecsact_eval_error{
 					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 					.relevant_content = {},
 				};
 			}
 
-			if(data.with_entity_field_name.length == 0) {
+			if(statement_data.with_field_name_list_count > 0) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_NESTED_ASSOC,
+					.relevant_content = statement_data.with_field_name_list[0],
+				};
+			}
+
+			const auto& context_data = context->data.system_component_statement;
+
+			auto assoc_comp_id =
+				find_by_statement<ecsact_component_like_id>(package_id, *context);
+			if(!assoc_comp_id) {
 				return ecsact_eval_error{
 					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
-					.relevant_content = data.component_name,
+					.relevant_content = {},
 				};
 			}
-			assoc_comp_field = find_field_by_name(
-				ecsact_id_cast<ecsact_composite_id>(*assoc_comp),
-				std::string_view(
-					data.with_entity_field_name.data,
-					data.with_entity_field_name.length
-				)
-			);
 
-			if(!assoc_comp_field) {
+			auto field_names = std::span{
+				std::data(context_data.with_field_name_list),
+				static_cast<size_t>(context_data.with_field_name_list_count)
+			};
+
+			if(!field_names.empty()) {
+				// NOTE: This is a temporary limitation of the interpreter since there
+				// isn't a way to get the association ID other than comparing fields.
+				auto assoc_ids =
+					find_assoc_ids_with_fields(*sys_like_id, *assoc_comp_id, field_names);
+				if(assoc_ids.size() > 1) {
+					return ecsact_eval_error{
+						.code = ECSACT_EVAL_ERR_SAME_FIELDS_SYSTEM_ASSOCIATION,
+						.relevant_content = {},
+					};
+				}
+				assoc_id = assoc_ids.at(0);
+			}
+			break;
+		}
+		// system Example {
+		//     readwrite ExampleComponent {
+		//        with blah {
+		//            readwrite ExampleComponent <-- we are here
+		//        }
+		//     }
+		// }
+		case ECSACT_STATEMENT_SYSTEM_WITH: {
+			if(context_stack.size() < 3) {
 				return ecsact_eval_error{
-					.code = ECSACT_EVAL_ERR_UNKNOWN_FIELD_NAME,
-					.relevant_content = data.with_entity_field_name,
+					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+					.relevant_content = {},
 				};
 			}
+			sys_like_id = find_by_statement<ecsact_system_like_id>(
+				package_id,
+				context_stack[context_stack.size() - 3]
+			);
+			if(!sys_like_id) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+					.relevant_content = {},
+				};
+			}
+
+			const auto& context_data = context->data.system_with_statement;
+
+			auto assoc_comp_id = find_by_statement<ecsact_component_like_id>(
+				package_id,
+				context_stack[context_stack.size() - 2]
+			);
+			if(!assoc_comp_id) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
+					.relevant_content = {},
+				};
+			}
+
+			auto field_names = std::span{
+				std::data(context_data.with_field_name_list),
+				static_cast<size_t>(context_data.with_field_name_list_count)
+			};
+
+			// NOTE: This is a temporary limitation of the interpreter since there
+			// isn't a way to get the association ID other than comparing fields.
+			auto assoc_ids =
+				find_assoc_ids_with_fields(*sys_like_id, *assoc_comp_id, field_names);
+			if(assoc_ids.size() > 1) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_SAME_FIELDS_SYSTEM_ASSOCIATION,
+					.relevant_content = {},
+				};
+			}
+			assoc_id = assoc_ids.at(0);
 			break;
 		}
 		default:
@@ -1162,84 +1387,54 @@ static ecsact_eval_error eval_system_component_statement(
 		};
 	}
 
-	auto& data = statement.data.system_component_statement;
-
-	std::string comp_like_name(
-		data.component_name.data,
-		data.component_name.length
-	);
-
-	auto comp_like_id =
-		find_by_name<ecsact_component_like_id>(package_id, comp_like_name);
-
-	if(!comp_like_id) {
-		return ecsact_eval_error{
-			.code = ECSACT_EVAL_ERR_UNKNOWN_COMPONENT_LIKE_TYPE,
-			.relevant_content = data.component_name,
-		};
-	}
-
-	if(assoc_comp) {
-		auto assoc_caps = ecsact::meta::system_association_capabilities(
+	if(statement_data.with_field_name_list_count > 0) {
+		auto status = eval_system_with_statement_data_common(
 			*sys_like_id,
-			*assoc_comp,
-			*assoc_comp_field
-		);
-		for(auto& entry : assoc_caps) {
-			if(entry.first == *comp_like_id) {
-				return ecsact_eval_error{
-					.code = ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
-					.relevant_content = data.component_name,
-				};
-			}
-		}
-	} else {
-		for(auto& entry : ecsact::meta::system_capabilities(*sys_like_id)) {
-			if(entry.first == *comp_like_id) {
-				return ecsact_eval_error{
-					.code = ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
-					.relevant_content = data.component_name,
-				};
-			}
-		}
-	}
-
-	std::optional<ecsact_field_id> entity_field_id{};
-	if(data.with_entity_field_name.length > 0) {
-		std::string entity_field_name(
-			data.with_entity_field_name.data,
-			data.with_entity_field_name.length
-		);
-
-		for(auto field_id : ecsact::meta::get_field_ids(*comp_like_id)) {
-			std::string field_name = ecsact_meta_field_name(
-				ecsact_id_cast<ecsact_composite_id>(*comp_like_id),
-				field_id
-			);
-			if(entity_field_name == field_name) {
-				entity_field_id = field_id;
-				break;
-			}
-		}
-
-		if(!entity_field_id) {
-			return ecsact_eval_error{
-				.code = ECSACT_EVAL_ERR_FIELD_NAME_ALREADY_EXISTS,
-				.relevant_content = data.with_entity_field_name,
-			};
-		}
-	}
-
-	if(assoc_comp) {
-		ecsact_set_system_association_capability(
-			*sys_like_id,
-			*assoc_comp,
-			*assoc_comp_field,
 			*comp_like_id,
-			data.capability
+			std::span{
+				std::data(statement_data.with_field_name_list),
+				static_cast<size_t>(statement_data.with_field_name_list_count)
+			}
+		);
+
+		if(status.code != ECSACT_EVAL_OK) {
+			return status;
+		}
+	}
+
+	if(assoc_id) {
+		for(auto& entry : system_assoc_capabilities(*sys_like_id, *assoc_id)) {
+			if(entry.first == *comp_like_id) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
+					.relevant_content = statement_data.component_name,
+				};
+			}
+		}
+	} else {
+		for(auto& entry : system_capabilities(*sys_like_id)) {
+			if(entry.first == *comp_like_id) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
+					.relevant_content = statement_data.component_name,
+				};
+			}
+		}
+	}
+
+	if(assoc_id) {
+		ecsact_set_system_assoc_capability(
+			*sys_like_id,
+			*assoc_id,
+			*comp_like_id,
+			statement_data.capability
 		);
 	} else {
-		ecsact_set_system_capability(*sys_like_id, *comp_like_id, data.capability);
+		ecsact_set_system_capability(
+			*sys_like_id,
+			*comp_like_id,
+			statement_data.capability
+		);
 	}
 
 	return {};
@@ -1289,7 +1484,7 @@ static ecsact_eval_error eval_system_generates_statement(
 	return {};
 }
 
-static ecsact_eval_error eval_system_with_entity_statement(
+static ecsact_eval_error eval_system_with_statement(
 	ecsact_package_id                  package_id,
 	std::span<const ecsact_statement>& context_stack,
 	const ecsact_statement&            statement
@@ -1305,8 +1500,10 @@ static ecsact_eval_error eval_system_with_entity_statement(
 		expect_context(context_stack, {ECSACT_STATEMENT_SYSTEM_COMPONENT});
 
 	if(err.code != ECSACT_EVAL_OK) {
-		err.relevant_content =
-			statement.data.system_with_entity_statement.with_entity_field_name;
+		if(statement.data.system_with_statement.with_field_name_list_count > 0) {
+			err.relevant_content =
+				statement.data.system_with_statement.with_field_name_list[0];
+		}
 		return err;
 	}
 
@@ -1341,33 +1538,16 @@ static ecsact_eval_error eval_system_with_entity_statement(
 		};
 	}
 
-	auto& data = statement.data.system_with_entity_statement;
+	auto& data = statement.data.system_with_statement;
 
-	std::string entity_field_name(
-		data.with_entity_field_name.data,
-		data.with_entity_field_name.length
-	);
-
-	auto entity_field_id = std::optional<ecsact_field_id>{};
-	for(auto field_id : ecsact::meta::get_field_ids(*comp_like_id)) {
-		std::string field_name = ecsact_meta_field_name(
-			ecsact_id_cast<ecsact_composite_id>(*comp_like_id),
-			field_id
-		);
-		if(entity_field_name == field_name) {
-			entity_field_id = field_id;
-			break;
+	return eval_system_with_statement_data_common(
+		*sys_like_id,
+		*comp_like_id,
+		std::span{
+			std::data(data.with_field_name_list),
+			static_cast<size_t>(data.with_field_name_list_count)
 		}
-	}
-
-	if(!entity_field_id) {
-		return ecsact_eval_error{
-			.code = ECSACT_EVAL_ERR_FIELD_NAME_ALREADY_EXISTS,
-			.relevant_content = data.with_entity_field_name,
-		};
-	}
-
-	return {};
+	);
 }
 
 static auto get_notify_setting_from_string( //
@@ -1709,8 +1889,8 @@ ecsact_eval_error ecsact_eval_statement(
 					context_statements,
 					statement
 				);
-			case ECSACT_STATEMENT_SYSTEM_WITH_ENTITY:
-				return eval_system_with_entity_statement(
+			case ECSACT_STATEMENT_SYSTEM_WITH:
+				return eval_system_with_statement(
 					package_id,
 					context_statements,
 					statement
@@ -1763,7 +1943,6 @@ ecsact_package_id ecsact_eval_package_statement(
 }
 
 void ecsact_eval_reset() {
-	// eval_pkgs.clear();
 }
 
 void ecsact::detail::check_file_eval_error(

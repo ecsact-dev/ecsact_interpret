@@ -9,9 +9,11 @@
 #include <variant>
 #include <cassert>
 #include <optional>
-#include <exception>
 #include <stdexcept>
 #include <unordered_map>
+#include "parse-resolver-runtime/lifecycle.hh"
+
+using ecsact::interpret::details::trigger_on_destroy;
 
 struct field {
 	std::string       name;
@@ -44,8 +46,7 @@ struct system_like {
 		std::unordered_map<ecsact_component_like_id, ecsact_system_capability>;
 
 	struct cap_entry {
-		ecsact_system_capability                            cap;
-		std::unordered_map<ecsact_field_id, cap_comp_map_t> assoc;
+		ecsact_system_capability cap;
 	};
 
 	struct gen_entry {
@@ -143,7 +144,9 @@ static ecsact_package_id owner_package_id(T id) {
 template<typename Callback>
 void visit_each_def_collection(Callback&& callback) {
 	callback(comp_defs);
+	callback(trans_defs);
 	callback(sys_defs);
+	callback(act_defs);
 }
 
 template<typename T>
@@ -220,6 +223,7 @@ void ecsact_destroy_package(ecsact_package_id package_id) {
 			if(owner_package_id(itr->first) != package_id) {
 				++itr;
 			} else {
+				trigger_on_destroy(itr->first);
 				itr = defs.erase(itr);
 			}
 		}
@@ -233,6 +237,8 @@ void ecsact_destroy_package(ecsact_package_id package_id) {
 			owner_itr = def_owner_map.erase(owner_itr);
 		}
 	}
+
+	trigger_on_destroy(package_id);
 }
 
 int32_t ecsact_meta_count_packages() {
@@ -661,7 +667,7 @@ static auto enum_type_size(ecsact_enum_id enum_id) {
 	return builtin_type_size(ecsact_meta_enum_storage_type(enum_id));
 }
 
-static auto field_type_size(ecsact_field_type type) {
+static auto field_type_size(ecsact_field_type type) -> int32_t {
 	auto base_size = 0;
 	switch(type.kind) {
 		case ECSACT_TYPE_KIND_BUILTIN:
@@ -669,6 +675,12 @@ static auto field_type_size(ecsact_field_type type) {
 			break;
 		case ECSACT_TYPE_KIND_ENUM:
 			base_size = enum_type_size(type.type.enum_id);
+			break;
+		case ECSACT_TYPE_KIND_FIELD_INDEX:
+			base_size = field_type_size(ecsact_meta_field_type(
+				type.type.field_index.composite_id,
+				type.type.field_index.field_id
+			));
 			break;
 	}
 
@@ -744,31 +756,6 @@ void ecsact_meta_system_capabilities(
 	if(out_capabilities_count != nullptr) {
 		*out_capabilities_count = static_cast<int32_t>(def.caps.size());
 	}
-}
-
-void ecsact_set_system_association_capability(
-	ecsact_system_like_id    sys_id,
-	ecsact_component_like_id comp_id,
-	ecsact_field_id          with_entity_field_id,
-	ecsact_component_like_id with_comp_id,
-	ecsact_system_capability with_comp_cap
-) {
-	auto& def = get_system_like(sys_id);
-	auto& assoc_field = def.caps.at(comp_id).assoc[with_entity_field_id];
-	assoc_field[with_comp_id] = with_comp_cap;
-}
-
-void ecsact_unset_system_association_capability(
-	ecsact_system_like_id    sys_id,
-	ecsact_component_like_id comp_id,
-	ecsact_field_id          with_entity_field_id,
-	ecsact_component_like_id with_comp_id
-) {
-	auto& def = get_system_like(sys_id);
-	assert(def.caps.contains(comp_id));
-	assert(def.caps.at(comp_id).assoc.contains(with_entity_field_id));
-	auto& assoc_field = def.caps.at(comp_id).assoc.at(with_entity_field_id);
-	assoc_field.erase(with_comp_id);
 }
 
 void ecsact_remove_child_system(
@@ -1067,90 +1054,6 @@ void ecsact_meta_system_generates_components(
 
 	if(out_components_count != nullptr) {
 		*out_components_count = static_cast<int32_t>(gen_def.size());
-	}
-}
-
-int32_t ecsact_meta_system_association_fields_count(
-	ecsact_system_like_id    system_id,
-	ecsact_component_like_id component_id
-) {
-	auto& def = get_system_like(system_id);
-	auto& caps = def.caps.at(component_id);
-
-	return static_cast<int32_t>(caps.assoc.size());
-}
-
-void ecsact_meta_system_association_fields(
-	ecsact_system_like_id    system_id,
-	ecsact_component_like_id component_id,
-	int32_t                  max_fields_count,
-	ecsact_field_id*         out_fields,
-	int32_t*                 out_fields_count
-) {
-	auto& def = get_system_like(system_id);
-	auto& caps = def.caps.at(component_id);
-
-	auto itr = caps.assoc.begin();
-	for(int i = 0; max_fields_count > i; ++i, ++itr) {
-		if(itr == caps.assoc.end()) {
-			break;
-		}
-
-		out_fields[i] = itr->first;
-	}
-
-	if(out_fields_count != nullptr) {
-		*out_fields_count = static_cast<int32_t>(caps.assoc.size());
-	}
-}
-
-int32_t ecsact_meta_system_association_capabilities_count(
-	ecsact_system_like_id    system_id,
-	ecsact_component_like_id component_id,
-	ecsact_field_id          field_id
-) {
-	auto& def = get_system_like(system_id);
-	auto& caps = def.caps.at(component_id);
-	if(caps.assoc.contains(field_id)) {
-		auto& assoc_field = caps.assoc.at(field_id);
-		return static_cast<int32_t>(assoc_field.size());
-	}
-
-	return 0;
-}
-
-void ecsact_meta_system_association_capabilities(
-	ecsact_system_like_id     system_id,
-	ecsact_component_like_id  component_id,
-	ecsact_field_id           field_id,
-	int32_t                   max_capabilities_count,
-	ecsact_component_like_id* out_capability_component_ids,
-	ecsact_system_capability* out_capabilities,
-	int32_t*                  out_capabilities_count
-) {
-	auto& def = get_system_like(system_id);
-	auto& caps = def.caps.at(component_id);
-
-	if(caps.assoc.contains(field_id)) {
-		auto& assoc_field = caps.assoc.at(field_id);
-
-		auto itr = assoc_field.begin();
-		for(int i = 0; max_capabilities_count > i; ++i, ++itr) {
-			if(itr == assoc_field.end()) {
-				break;
-			}
-
-			out_capability_component_ids[i] = itr->first;
-			out_capabilities[i] = itr->second;
-		}
-
-		if(out_capabilities_count != nullptr) {
-			*out_capabilities_count = static_cast<int32_t>(assoc_field.size());
-		}
-	} else {
-		if(out_capabilities_count != nullptr) {
-			*out_capabilities_count = 0;
-		}
 	}
 }
 
