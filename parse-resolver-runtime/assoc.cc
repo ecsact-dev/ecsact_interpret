@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <utility>
 #include <memory>
+#include <stdexcept>
 #include "parse-resolver-runtime/ids.hh"
 #include "parse-resolver-runtime/lifecycle.hh"
 
@@ -324,4 +325,104 @@ void ecsact_meta_system_assoc_capabilities(
 		out_capability_component_ids[i] = info->caps[i].first;
 		out_capabilities[i] = info->caps[i].second;
 	}
+}
+
+static auto get_legacy_assoc_info( //
+	ecsact_system_like_id id
+) -> std::shared_ptr<assoc_info> {
+	auto list = get_system_assoc_list(id);
+	if(!list || list->empty()) {
+		return {};
+	}
+	// shouldn't be using the legacy API!
+	if(list->size() > 1) {
+		throw std::logic_error{"invalid use of legacy api"};
+	}
+	return list->at(0);
+}
+
+[[deprecated]]
+int32_t ecsact_meta_system_association_fields_count(
+	ecsact_system_like_id    system_id,
+	ecsact_component_like_id component_id
+) {
+	auto info = get_legacy_assoc_info(system_id);
+	if(component_id != info->comp_id) {
+		// shouldn't be using the legacy API!
+		throw std::logic_error{"(legacy api) invalid association component"};
+	}
+
+	return static_cast<int32_t>(info->assoc_fields.size());
+}
+
+[[deprecated]]
+void ecsact_meta_system_association_fields(
+	ecsact_system_like_id    system_id,
+	ecsact_component_like_id component_id,
+	int32_t                  max_fields_count,
+	ecsact_field_id*         out_fields,
+	int32_t*                 out_fields_count
+) {
+	auto info = get_legacy_assoc_info(system_id);
+	if(component_id != info->comp_id) {
+		// shouldn't be using the legacy API!
+		throw std::logic_error{"(legacy api) invalid association component"};
+	}
+	ecsact_meta_system_assoc_fields(
+		system_id,
+		info->id,
+		max_fields_count,
+		out_fields,
+		out_fields_count
+	);
+}
+
+[[deprecated]]
+int32_t ecsact_meta_system_association_capabilities_count(
+	ecsact_system_like_id    system_id,
+	ecsact_component_like_id component_id,
+	ecsact_field_id          field_id
+) {
+	auto info = get_legacy_assoc_info(system_id);
+	if(component_id != info->comp_id) {
+		// shouldn't be using the legacy API!
+		throw std::logic_error{"(legacy api) invalid association component"};
+	}
+	return ecsact_meta_system_assoc_capabilities_count(system_id, info->id);
+}
+
+[[deprecated]]
+void ecsact_meta_system_association_capabilities(
+	ecsact_system_like_id     system_id,
+	ecsact_component_like_id  component_id,
+	ecsact_field_id           field_id,
+	int32_t                   max_capabilities_count,
+	ecsact_component_like_id* out_capability_component_ids,
+	ecsact_system_capability* out_capabilities,
+	int32_t*                  out_capabilities_count
+) {
+	auto info = get_legacy_assoc_info(system_id);
+	if(component_id != info->comp_id) {
+		// shouldn't be using the legacy API!
+		throw std::logic_error{"(legacy api) invalid association component"};
+	}
+	if(info->assoc_fields.size() != 1) {
+		// shouldn't be using the legacy API!
+		throw std::logic_error{
+			"(legacy api) doesn't support multi field association"
+		};
+	}
+	if(info->assoc_fields.at(0) != field_id) {
+		// shouldn't be using the legacy API!
+		throw std::logic_error{"(legacy api) invalid association field"};
+	}
+
+	ecsact_meta_system_assoc_capabilities(
+		system_id,
+		info->id,
+		max_capabilities_count,
+		out_capability_component_ids,
+		out_capabilities,
+		out_capabilities_count
+	);
 }
