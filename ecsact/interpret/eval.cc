@@ -49,7 +49,6 @@ static auto expect_context(
 	}
 
 	if(context_stack.empty()) {
-		__debugbreak();
 		return {
 			nullptr,
 			ecsact_eval_error{
@@ -67,7 +66,6 @@ static auto expect_context(
 		}
 	}
 
-	__debugbreak();
 	return {
 		&context,
 		ecsact_eval_error{
@@ -774,7 +772,6 @@ static ecsact_eval_error eval_system_statement(
 		parent_sys_like_id =
 			find_by_statement<ecsact_system_like_id>(package_id, *context);
 		if(!parent_sys_like_id) {
-			__debugbreak();
 			return ecsact_eval_error{
 				.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 				.relevant_content = {},
@@ -910,7 +907,6 @@ static ecsact_eval_error eval_enum_value_statement(
 
 	auto enum_id = find_by_name<ecsact_enum_id>(package_id, enum_name);
 	if(!enum_id) {
-		__debugbreak();
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 			.relevant_content = context_data.enum_name,
@@ -947,7 +943,6 @@ static ecsact_eval_error eval_builtin_type_field_statement(
 
 	auto compo_id = find_by_statement<ecsact_composite_id>(package_id, *context);
 	if(!compo_id) {
-		__debugbreak();
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 			.relevant_content = {},
@@ -1007,7 +1002,6 @@ static ecsact_eval_error eval_user_type_field_statement(
 	auto compo_id =
 		find_by_statement<ecsact_composite_id>(package_id, context_stack.back());
 	if(!compo_id) {
-		__debugbreak();
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 			.relevant_content = {},
@@ -1261,7 +1255,6 @@ static ecsact_eval_error eval_system_component_statement(
 		// }
 		case ECSACT_STATEMENT_SYSTEM_COMPONENT: {
 			if(context_stack.size() < 2) {
-				__debugbreak();
 				return ecsact_eval_error{
 					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 					.relevant_content = {},
@@ -1273,7 +1266,6 @@ static ecsact_eval_error eval_system_component_statement(
 			);
 
 			if(!sys_like_id) {
-				__debugbreak();
 				return ecsact_eval_error{
 					.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 					.relevant_content = {},
@@ -1413,7 +1405,6 @@ static ecsact_eval_error eval_system_component_statement(
 	if(assoc_id) {
 		for(auto& entry : system_assoc_capabilities(*sys_like_id, *assoc_id)) {
 			if(entry.first == *comp_like_id) {
-				__debugbreak();
 				return ecsact_eval_error{
 					.code = ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
 					.relevant_content = statement_data.component_name,
@@ -1423,7 +1414,6 @@ static ecsact_eval_error eval_system_component_statement(
 	} else {
 		for(auto& entry : system_capabilities(*sys_like_id)) {
 			if(entry.first == *comp_like_id) {
-				__debugbreak();
 				return ecsact_eval_error{
 					.code = ECSACT_EVAL_ERR_MULTIPLE_CAPABILITIES_SAME_COMPONENT_LIKE,
 					.relevant_content = statement_data.component_name,
@@ -1475,7 +1465,6 @@ static ecsact_eval_error eval_system_generates_statement(
 		find_by_statement<ecsact_system_like_id>(package_id, context_stack.back());
 
 	if(!sys_like_id) {
-		__debugbreak();
 		return ecsact_eval_error{
 			.code = ECSACT_EVAL_ERR_INVALID_CONTEXT,
 			.relevant_content = {},
