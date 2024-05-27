@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.2 - 2024-05-27
+#### Features
+- implement new assoc api (#224) - (42ddbb7) - Ezekiel Warren
+#### Miscellaneous Chores
+- sync with ecsact_common (#216) - (b97c452) - seaubot
+- remove bazel lock file - (31ab9de) - Ezekiel Warren
+
+- - -
+
 ## 0.6.1 - 2024-05-10
 #### Bug Fixes
 - empty api defines for bazel runtime (#220) - (0714b6c) - Ezekiel Warren
