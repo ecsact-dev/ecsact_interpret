@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 #include "ecsact/interpret/eval.hh"
 #include "ecsact/runtime/meta.hh"
+#include "magic_enum.hpp"
 #include "bazel_sundry/runfiles.hh"
 
 inline auto get_component_by_name( //
