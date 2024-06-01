@@ -138,6 +138,33 @@ auto statement_param<bool>( //
 	return result;
 }
 
+template<>
+auto statement_param<std::string_view>( //
+	const ecsact_statement& statement,
+	std::string_view        param_name
+) -> std::optional<std::string_view> {
+	auto result = std::optional<std::string_view>{};
+	for(auto& param : view_statement_params(statement)) {
+		if(std::string_view{
+				 param.name.data,
+				 static_cast<size_t>(param.name.length)
+			 } != param_name) {
+			continue;
+		}
+
+		if(param.value.type != ECSACT_STATEMENT_PARAM_VALUE_TYPE_STRING) {
+			break;
+		}
+
+		result = std::string_view{
+			param.value.data.string_value.data,
+			static_cast<size_t>(param.value.data.string_value.length),
+		};
+	}
+
+	return result;
+}
+
 template<typename FirstT, typename SecondT>
 auto statement_param( //
 	const ecsact_statement& statement,
@@ -160,6 +187,38 @@ auto statement_param( //
 	}
 
 	return std::nullopt;
+}
+
+static auto parallel_param(const ecsact_statement& statement
+) -> std::variant<ecsact_parallel_execution, ecsact_eval_error_code> {
+	using result_t =
+		std::variant<ecsact_parallel_execution, ecsact_eval_error_code>;
+
+	auto param = statement_param<bool, std::string_view>(statement, "parallel");
+	if(!param) {
+		return ECSACT_PAR_EXEC_AUTO;
+	}
+
+	auto result = std::visit(
+		overloaded{
+			[&](bool param) -> result_t {
+				return param ? ECSACT_PAR_EXEC_PREFERRED : ECSACT_PAR_EXEC_DENY;
+			},
+			[&](std::string_view param) -> result_t {
+				if(param == "auto") {
+					return ECSACT_PAR_EXEC_AUTO;
+				} else if(param == "preferred") {
+					return ECSACT_PAR_EXEC_PREFERRED;
+				} else if(param == "deny") {
+					return ECSACT_PAR_EXEC_DENY;
+				} else {
+					return ECSACT_EVAL_ERR_INVALID_PARAMETER_VALUE;
+				}
+			}
+		},
+		*param
+	);
+	return result;
 }
 
 auto allow_statement_params( //
@@ -803,10 +862,17 @@ static ecsact_eval_error eval_system_statement(
 		ecsact_set_system_lazy_iteration_rate(sys_id, lazy_value);
 	}
 
-	auto parallel = statement_param<bool>(statement, "parallel").value_or(false);
+	auto parallel = parallel_param(statement);
+	if(auto err_code = std::get_if<ecsact_eval_error_code>(&parallel)) {
+		return ecsact_eval_error{
+			.code = *err_code,
+			.relevant_content = data.system_name,
+		};
+	}
+
 	ecsact_set_system_parallel_execution(
 		ecsact_id_cast<ecsact_system_like_id>(sys_id),
-		parallel
+		std::get<ecsact_parallel_execution>(parallel)
 	);
 
 	return {};
@@ -845,10 +911,17 @@ static ecsact_eval_error eval_action_statement(
 		data.action_name.length
 	);
 
-	auto parallel = statement_param<bool>(statement, "parallel").value_or(false);
+	auto parallel = parallel_param(statement);
+	if(auto err_code = std::get_if<ecsact_eval_error_code>(&parallel)) {
+		return ecsact_eval_error{
+			.code = *err_code,
+			.relevant_content = data.action_name,
+		};
+	}
+
 	ecsact_set_system_parallel_execution(
 		ecsact_id_cast<ecsact_system_like_id>(act_id),
-		parallel
+		std::get<ecsact_parallel_execution>(parallel)
 	);
 
 	return {};
