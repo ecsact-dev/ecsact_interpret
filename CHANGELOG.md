@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.3 - 2024-06-01
+#### Features
+- new parallel parameter values support (#227) - (db618d1) - Ezekiel Warren
+- implement legacy association api (#226) - (9c1c3a6) - Ezekiel Warren
+
+- - -
+
 ## 0.6.2 - 2024-05-27
 #### Features
 - implement new assoc api (#224) - (42ddbb7) - Ezekiel Warren
