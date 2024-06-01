@@ -85,6 +85,9 @@ typedef enum ecsact_eval_error_code {
 	/// currently not allowed.
 	ECSACT_EVAL_ERR_SAME_FIELDS_SYSTEM_ASSOCIATION,
 
+	/// Statement supports the given parameter name but the value is invalid
+	ECSACT_EVAL_ERR_INVALID_PARAMETER_VALUE,
+
 	/// Internal error. Should not happen and is an indiciation of a bug.
 	ECSACT_EVAL_ERR_INTERNAL = 999,
 

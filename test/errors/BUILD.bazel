@@ -1,5 +1,5 @@
-load("@rules_cc//cc:defs.bzl", "cc_test")
 load("@ecsact_interpret//bazel:copts.bzl", "copts")
+load("@rules_cc//cc:defs.bzl", "cc_test")
 
 # buildifier: keep sorted
 _TESTS = [
@@ -9,6 +9,7 @@ _TESTS = [
     "no_package_statement_first",
     "unknown_association_field",
     "unknown_component_notify_settings",
+    "unknown_param_value",
 ]
 
 [cc_test(

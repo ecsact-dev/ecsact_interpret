@@ -134,6 +134,13 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 				 field_id
 			 );
 			 ASSERT_STREQ(assoc_field_name, "test_entity");
+
+			 ASSERT_EQ(
+				 ecsact_meta_get_system_parallel_execution(
+					 ecsact_id_cast<ecsact_system_like_id>(sys_id)
+				 ),
+				 ECSACT_PAR_EXEC_AUTO
+			 );
 		 }},
 		{"TestNestedSystem",
 		 [&](ecsact_system_id sys_id) {
@@ -157,9 +164,12 @@ TEST(EcsactParseRuntimeInterop, Simple) {
 			 );
 			 ASSERT_EQ(sys_caps[0], ECSACT_SYS_CAP_READWRITE);
 
-			 ASSERT_TRUE(ecsact_meta_get_system_parallel_execution(
-				 ecsact_id_cast<ecsact_system_like_id>(sys_id)
-			 ));
+			 ASSERT_EQ(
+				 ecsact_meta_get_system_parallel_execution(
+					 ecsact_id_cast<ecsact_system_like_id>(sys_id)
+				 ),
+				 ECSACT_PAR_EXEC_PREFERRED
+			 );
 		 }},
 	};
 
