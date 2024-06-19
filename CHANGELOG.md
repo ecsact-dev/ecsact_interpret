@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.4 - 2024-06-19
+#### Bug Fixes
+- add missing out capabilities count assignment (#229) - (e81cead) - Ezekiel Warren
+
+- - -
+
 ## 0.6.3 - 2024-06-01
 #### Features
 - new parallel parameter values support (#227) - (db618d1) - Ezekiel Warren
