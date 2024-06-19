@@ -317,6 +317,10 @@ void ecsact_meta_system_assoc_capabilities(
 		return;
 	}
 
+	if(out_capabilities_count) {
+		*out_capabilities_count = static_cast<int32_t>(info->caps.size());
+	}
+
 	for(int32_t i = 0; max_capabilities_count > i; ++i) {
 		if(i >= info->caps.size()) {
 			break;
