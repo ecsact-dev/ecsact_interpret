@@ -88,6 +88,9 @@ typedef enum ecsact_eval_error_code {
 	/// Statement supports the given parameter name but the value is invalid
 	ECSACT_EVAL_ERR_INVALID_PARAMETER_VALUE,
 
+	/// Field type is not allowed in 'with' statement
+	ECSACT_EVAL_ERR_INVALID_ASSOC_FIELD_TYPE,
+
 	/// Internal error. Should not happen and is an indiciation of a bug.
 	ECSACT_EVAL_ERR_INTERNAL = 999,
 

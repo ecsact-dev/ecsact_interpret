@@ -1171,6 +1171,28 @@ static auto get_with_field_ids(
 	return with_field_ids;
 }
 
+static auto find_capabilities_for( //
+	auto sys_like_id,
+	auto id
+) -> std::optional<ecsact_system_capability> {
+	for(auto&& [comp_id, caps] : ecsact::meta::system_capabilities(sys_like_id)) {
+		if(ecsact_id_cast<decltype(id)>(comp_id) == id) {
+			return caps;
+		}
+	}
+
+	auto parent = ecsact::meta::get_parent_system_id(
+		// NOTE: this cast only works because we wrote the meta runtime for the
+		// interpreter. This is bad practice.
+		static_cast<ecsact_system_id>(sys_like_id)
+	);
+	if(parent) {
+		return find_capabilities_for(*parent, id);
+	}
+
+	return {};
+}
+
 static auto eval_system_with_statement_data_common(
 	ecsact_system_like_id                sys_like_id,
 	ecsact_component_like_id             comp_like_id,
@@ -1197,6 +1219,23 @@ static auto eval_system_with_statement_data_common(
 		if(!assoc_field_id) {
 			return ecsact_eval_error{
 				.code = ECSACT_EVAL_ERR_UNKNOWN_FIELD_NAME,
+				.relevant_content = fields[i],
+			};
+		}
+
+		auto field_type =
+			ecsact::meta::get_field_type(comp_like_id, *assoc_field_id);
+
+		if(field_type.kind == ECSACT_TYPE_KIND_BUILTIN) {
+			if(field_type.type.builtin != ECSACT_ENTITY_TYPE) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_ASSOC_FIELD_TYPE,
+					.relevant_content = fields[i],
+				};
+			}
+		} else if(field_type.kind != ECSACT_TYPE_KIND_FIELD_INDEX) {
+			return ecsact_eval_error{
+				.code = ECSACT_EVAL_ERR_INVALID_ASSOC_FIELD_TYPE,
 				.relevant_content = fields[i],
 			};
 		}

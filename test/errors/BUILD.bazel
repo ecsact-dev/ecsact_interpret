@@ -4,6 +4,7 @@ load("@rules_cc//cc:defs.bzl", "cc_test")
 # buildifier: keep sorted
 _TESTS = [
     "duplicate_notice_components",
+    "invalid_assoc_field",
     "invalid_notify_settings",
     "no_capabilities",
     "no_package_statement_first",
@@ -15,9 +16,9 @@ _TESTS = [
 [cc_test(
     name = test,
     srcs = ["{}.cc".format(test)],
+    args = ["--gtest_catch_exceptions=0"],
     copts = copts,
     data = ["{}.ecsact".format(test)],
-    args = ["--gtest_catch_exceptions=0"],
     deps = [
         "//:test_lib",
         "@ecsact_interpret",
@@ -29,12 +30,12 @@ _TESTS = [
 cc_test(
     name = "ambiguous_field_type",
     srcs = ["ambiguous_field_type.cc"],
+    args = ["--gtest_catch_exceptions=0"],
     copts = copts,
     data = [
         "ambiguous_field_type.ecsact",
         "ambiguous_field_type_import.ecsact",
     ],
-    args = ["--gtest_catch_exceptions=0"],
     deps = [
         "//:test_lib",
         "@ecsact_interpret",
