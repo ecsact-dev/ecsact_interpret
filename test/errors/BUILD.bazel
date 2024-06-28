@@ -10,6 +10,7 @@ _TESTS = [
     "unknown_association_field",
     "unknown_component_notify_settings",
     "unknown_param_value",
+    "invalid_assoc_field",
 ]
 
 [cc_test(
