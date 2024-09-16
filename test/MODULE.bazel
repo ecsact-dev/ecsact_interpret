@@ -36,3 +36,8 @@ local_path_override(
     module_name = "ecsact_interpret",
     path = "..",
 )
+
+local_path_override(
+    module_name = "ecsact_runtime",
+    path = "../../ecsact_runtime",
+)

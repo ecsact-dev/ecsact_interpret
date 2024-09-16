@@ -34,7 +34,8 @@ public:
 struct component_like : composite {};
 
 struct comp_def : component_like {
-	std::string name;
+	std::string           name;
+	ecsact_component_type comp_type;
 };
 
 struct trans_def : component_like {
@@ -283,6 +284,7 @@ ecsact_component_id ecsact_create_component(
 	set_package_owner(comp_id, owner);
 	auto& def = comp_defs[comp_id];
 	def.name = std::string_view(component_name, component_name_len);
+	def.comp_type = ECSACT_COMPONENT_TYPE_NONE;
 	full_names[decl_id] = pkg_def.name + "." + def.name;
 
 	return comp_id;
@@ -1136,11 +1138,30 @@ auto ecsact_set_system_notify_component_setting(
 auto ecsact_meta_component_type( //
 	ecsact_component_id component_id
 ) -> ecsact_component_type {
-	return ECSACT_COMPONENT_TYPE_NONE;
+	auto comp_def = comp_defs.find(component_id);
+	if(comp_def == comp_defs.end()) {
+		// NOTE: this is temporary until we remove the transient fns and instead
+		// embrace components with transient statement params
+		auto trans_def =
+			trans_defs.find(static_cast<ecsact_transient_id>(component_id));
+		if(trans_def != trans_defs.end()) {
+			return ECSACT_COMPONENT_TYPE_TRANSIENT;
+		}
+
+		return ECSACT_COMPONENT_TYPE_NONE;
+	}
+
+	return comp_def->second.comp_type;
 }
 
 auto ecsact_set_component_type( //
 	ecsact_component_id   component_id,
-	ecsact_component_type comp
+	ecsact_component_type comp_type
 ) -> void {
+	auto comp_def = comp_defs.find(component_id);
+	if(comp_def == comp_defs.end()) {
+		return;
+	}
+
+	comp_def->second.comp_type = comp_type;
 }
