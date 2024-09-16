@@ -6,6 +6,7 @@ _TESTS = [
     "duplicate_notice_components",
     "invalid_assoc_field",
     "invalid_notify_settings",
+    "invalid_stream_component_param_value",
     "no_capabilities",
     "no_package_statement_first",
     "unknown_association_field",
