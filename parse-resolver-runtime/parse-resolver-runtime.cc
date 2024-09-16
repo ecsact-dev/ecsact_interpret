@@ -1136,14 +1136,15 @@ auto ecsact_set_system_notify_component_setting(
 }
 
 auto ecsact_meta_component_type( //
-	ecsact_component_id component_id
+	ecsact_component_like_id comp_like_id
 ) -> ecsact_component_type {
-	auto comp_def = comp_defs.find(component_id);
+	auto comp_def =
+		comp_defs.find(static_cast<ecsact_component_id>(comp_like_id));
 	if(comp_def == comp_defs.end()) {
 		// NOTE: this is temporary until we remove the transient fns and instead
 		// embrace components with transient statement params
 		auto trans_def =
-			trans_defs.find(static_cast<ecsact_transient_id>(component_id));
+			trans_defs.find(static_cast<ecsact_transient_id>(comp_like_id));
 		if(trans_def != trans_defs.end()) {
 			return ECSACT_COMPONENT_TYPE_TRANSIENT;
 		}

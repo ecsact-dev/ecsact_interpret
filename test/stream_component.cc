@@ -26,22 +26,31 @@ TEST_F(StreamComponent, SanityCheck) {
 	auto comp_id = get_component_by_name(pkg_id, "MyNormieComponent");
 	ASSERT_TRUE(comp_id);
 
-	ASSERT_EQ(ecsact_meta_component_type(*comp_id), ECSACT_COMPONENT_TYPE_NONE);
+	auto comp_like_id = ecsact_meta_component_type(
+		ecsact_id_cast<ecsact_component_like_id>(*comp_id)
+	);
+
+	ASSERT_EQ(comp_like_id, ECSACT_COMPONENT_TYPE_NONE);
 }
 
 TEST_F(StreamComponent, HasStreamType) {
 	auto comp_id = get_component_by_name(pkg_id, "MyStreamComponent");
 	ASSERT_TRUE(comp_id);
 
-	ASSERT_EQ(ecsact_meta_component_type(*comp_id), ECSACT_COMPONENT_TYPE_STREAM);
+	auto comp_type = ecsact_meta_component_type(
+		ecsact_id_cast<ecsact_component_like_id>(*comp_id)
+	);
+
+	ASSERT_EQ(comp_type, ECSACT_COMPONENT_TYPE_STREAM);
 }
 
 TEST_F(StreamComponent, HasLazyStreamType) {
 	auto comp_id = get_component_by_name(pkg_id, "MyLazyStreamComponent");
 	ASSERT_TRUE(comp_id);
 
-	ASSERT_EQ(
-		ecsact_meta_component_type(*comp_id),
-		ECSACT_COMPONENT_TYPE_LAZY_STREAM
+	auto comp_type = ecsact_meta_component_type(
+		ecsact_id_cast<ecsact_component_like_id>(*comp_id)
 	);
+
+	ASSERT_EQ(comp_type, ECSACT_COMPONENT_TYPE_LAZY_STREAM);
 }
