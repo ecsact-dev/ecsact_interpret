@@ -1132,3 +1132,15 @@ auto ecsact_set_system_notify_component_setting(
 		def.notify_settings[component_like_id] = setting;
 	}
 }
+
+auto ecsact_meta_component_type( //
+	ecsact_component_id component_id
+) -> ecsact_component_type {
+	return ECSACT_COMPONENT_TYPE_NONE;
+}
+
+auto ecsact_set_component_type( //
+	ecsact_component_id   component_id,
+	ecsact_component_type comp
+) -> void {
+}
