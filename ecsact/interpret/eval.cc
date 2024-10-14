@@ -726,8 +726,44 @@ static ecsact_eval_error eval_component_statement(
 		return err;
 	}
 
-	if(auto err = disallow_statement_params(statement, context)) {
+	constexpr auto allowed_params = std::array{"stream"sv, "transient"sv};
+	if(auto err = allow_statement_params(statement, context, allowed_params)) {
 		return *err;
+	}
+
+	auto stream_param =
+		statement_param<bool, std::string_view>(statement, "stream"sv);
+	auto transient_param = statement_param<bool>(statement, "transient"sv);
+	auto component_type = ECSACT_COMPONENT_TYPE_NONE;
+
+	if(stream_param) {
+		auto stream_type = std::get_if<std::string_view>(&stream_param.value());
+		if(stream_type) {
+			if(*stream_type != "lazy"sv) {
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_PARAMETER_VALUE,
+					.relevant_content = statement.parameters[0].name,
+				};
+			}
+
+			component_type = ECSACT_COMPONENT_TYPE_LAZY_STREAM;
+		} else if(std::get<bool>(stream_param.value())) {
+			component_type = ECSACT_COMPONENT_TYPE_STREAM;
+		}
+	}
+
+	if(transient_param) {
+		if(transient_param.value()) {
+			if(component_type != ECSACT_COMPONENT_TYPE_NONE) {
+				// can't have transient stream
+				return ecsact_eval_error{
+					.code = ECSACT_EVAL_ERR_INVALID_PARAMETER_VALUE,
+					.relevant_content = statement.parameters[0].name,
+				};
+			}
+
+			component_type = ECSACT_COMPONENT_TYPE_TRANSIENT;
+		}
 	}
 
 	auto name = std::string(data.component_name.data, data.component_name.length);
@@ -740,11 +776,13 @@ static ecsact_eval_error eval_component_statement(
 		};
 	}
 
-	ecsact_create_component(
+	auto comp_id = ecsact_create_component(
 		package_id,
 		data.component_name.data,
 		data.component_name.length
 	);
+
+	ecsact_set_component_type(comp_id, component_type);
 
 	return {};
 }
