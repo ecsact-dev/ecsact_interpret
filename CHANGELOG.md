@@ -2,6 +2,22 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.5 - 2024-10-14
+#### Features
+- new component type apis (#240) - (5ff8cf0) - Ezekiel Warren
+- check for invalid assoc with fields (#232) - (4449ade) - Ezekiel Warren
+#### Miscellaneous Chores
+- **(deps)** update dependency ecsact_runtime to v0.6.9 (#239) - (26a80e1) - renovate[bot]
+- **(deps)** update dependency ecsact_runtime to v0.6.8 (#237) - (fa8165c) - renovate[bot]
+- **(deps)** update dependency ecsact_runtime to v0.6.7 (#234) - (e1c9fa5) - renovate[bot]
+- sync with ecsact_common (#238) - (9665557) - seaubot
+- update readme logo - (7a1c3f1) - Ezekiel Warren
+- sync with ecsact_common (#233) - (473a7cc) - seaubot
+- sync with ecsact_common (#231) - (1f75356) - seaubot
+- sync with ecsact_common (#230) - (e7069dd) - seaubot
+
+- - -
+
 ## 0.6.4 - 2024-06-19
 #### Bug Fixes
 - add missing out capabilities count assignment (#229) - (e81cead) - Ezekiel Warren
