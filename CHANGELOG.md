@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.6 - 2024-10-15
+#### Miscellaneous Chores
+- update ecsact_parse - (047249d) - Ezekiel Warren
+
+- - -
+
 ## 0.6.5 - 2024-10-14
 #### Features
 - new component type apis (#240) - (5ff8cf0) - Ezekiel Warren
