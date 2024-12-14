@@ -106,3 +106,19 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "anonymous_system",
+    srcs = ["anonymous_system.cc"],
+    copts = copts,
+    data = [
+        "anonymous_system.ecsact",
+    ],
+    deps = [
+        ":test_lib",
+        "//:ecsact_interpret",
+        "@bazel_sundry//bazel_sundry:runfiles",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

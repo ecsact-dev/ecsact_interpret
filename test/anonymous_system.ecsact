@@ -1,0 +1,7 @@
+package example.anonymous_sys;
+
+component MyComponent;
+
+// Trival anonymous system that always removes MyComponent
+system { removes MyComponent; }
+
